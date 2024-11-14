@@ -1,0 +1,3721 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema", "views"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["commerce", "public", "salesportal", "security", "user"]
+}
+
+model ComCashflow {
+  guid                String            @id
+  comServiceGuid      String
+  comCashflowReasonId Int
+  date                DateTime
+  amount              Int
+  blameUser           String?
+  createdAt           DateTime?         @default(now())
+  updatedAt           DateTime
+  ComCashflowReason   ComCashflowReason @relation(fields: [comCashflowReasonId], references: [id])
+  ComService          ComService        @relation(fields: [comServiceGuid], references: [guid])
+
+  @@index([guid, createdAt])
+  @@schema("commerce")
+}
+
+model ComCashflowReason {
+  id          Int           @id @default(autoincrement())
+  description String
+  type        FlowType
+  isActive    Boolean       @default(true)
+  blameUser   String?
+  createdAt   DateTime?     @default(now())
+  updatedAt   DateTime
+  ComCashflow ComCashflow[]
+
+  @@index([id, type])
+  @@schema("commerce")
+}
+
+model ComCommerceChannel {
+  id                         Int                          @id @default(autoincrement())
+  description                String
+  type                       CommerceChannelType
+  channelId                  Int?
+  processingCode             Int?
+  receivingNet               Int?
+  transmitingNet             Int?
+  isDefault                  Boolean                      @default(false)
+  isActive                   Boolean                      @default(true)
+  blameUser                  String
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime
+  ComCommerceChannelTerminal ComCommerceChannelTerminal[]
+
+  @@schema("commerce")
+}
+
+model ComCommerceChannelTerminal {
+  id                    Int                @id @default(autoincrement())
+  comCommerceChannelId  Int
+  toTerminalGroupId     Int?
+  toTransportOperatorId Int?
+  toTerminalCode        Int?
+  isActive              Boolean            @default(true)
+  blameUser             String
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime
+  ComCommerceChannel    ComCommerceChannel @relation(fields: [comCommerceChannelId], references: [id])
+
+  @@unique([toTerminalCode, toTerminalGroupId, toTransportOperatorId, comCommerceChannelId])
+  @@schema("commerce")
+}
+
+model ComExternalTransactionDetail {
+  id               Int            @id @default(autoincrement())
+  answerNsu        BigInt?        @unique
+  askRequest       Json?
+  askResponse      Json?
+  endRequest       Json?
+  endResponse      Json?
+  comTransactionId Int            @unique
+  askNsu           BigInt         @unique
+  blameUser        String
+  createdAt        DateTime       @default(now())
+  endNsu           BigInt?
+  updatedAt        DateTime
+  askAnswerCode    Int?
+  endAnswerCode    Int?
+  ComTransaction   ComTransaction @relation(fields: [comTransactionId], references: [id])
+
+  @@schema("commerce")
+}
+
+model ComInvoice {
+  id                   Int                    @id @default(autoincrement())
+  value                Int
+  isProcessed          Boolean                @default(false)
+  dueDate              DateTime
+  paymentDate          DateTime?
+  comMerchantId        Int
+  comPaymentModeId     Int
+  cancelDate           DateTime?
+  isActive             Boolean                @default(true)
+  isPaid               Boolean                @default(false)
+  blameUser            String
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  comSubscriptionId    Int
+  ComMerchant          ComMerchant            @relation(fields: [comMerchantId], references: [id])
+  ComPaymentMode       ComPaymentMode         @relation(fields: [comPaymentModeId], references: [id])
+  ComSubscription      ComSubscription        @relation(fields: [comSubscriptionId], references: [id])
+  ComInvoicePayment    ComInvoicePayment?
+  ComRechargeOrder     ComRechargeOrder[]
+  ComRechargeOrder_old ComRechargeOrder_old[]
+
+  @@index([comMerchantId])
+  @@schema("commerce")
+}
+
+model ComInvoicePayment {
+  id           Int        @id @default(autoincrement())
+  externalId   Int?
+  authCode     String?
+  comInvoiceId Int        @unique
+  dueDate      DateTime
+  paymentDate  DateTime?
+  cancelDate   DateTime?
+  isProcessed  Boolean    @default(false)
+  isActive     Boolean    @default(true)
+  blameUser    String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime
+  ComInvoice   ComInvoice @relation(fields: [comInvoiceId], references: [id])
+
+  @@index([comInvoiceId])
+  @@schema("commerce")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ComMerchant {
+  id                             Int                              @id @default(autoincrement())
+  name                           String                           @unique
+  type                           MerchantType
+  clientId                       String?                          @unique
+  isActive                       Boolean                          @default(true)
+  toTransportOperatorId          Int
+  blameUser                      String
+  createdAt                      DateTime                         @default(now())
+  updatedAt                      DateTime
+  allowedUsrTypeIds              Int[]
+  comRechargeOrderTaxId          Int?
+  comSubscriptionId              Int?
+  usrOrganizationId              Int?
+  clientSecret                   String?
+  ComInvoice                     ComInvoice[]
+  ComRechargeOrderTax            ComRechargeOrderTax?             @relation(fields: [comRechargeOrderTaxId], references: [id])
+  ComSubscription                ComSubscription?                 @relation(fields: [comSubscriptionId], references: [id])
+  ComMerchantAccount             ComMerchantAccount?
+  ComMerchantProduct             ComMerchantProduct[]
+  ComMerchantProductRestriction  ComMerchantProductRestriction[]
+  ComMerchantWebHook             ComMerchantWebHook[]
+  ComPaymentModeRestriction      ComPaymentModeRestriction[]
+  ComPaymentModeRule             ComPaymentModeRule[]
+  ComProductPaymentRestriction   ComProductPaymentRestriction[]
+  ComRechargeOrder               ComRechargeOrder[]
+  ComRechargeOrder_old           ComRechargeOrder_old[]
+  ComService                     ComService[]
+  ComTerminalFunctionRestriction ComTerminalFunctionRestriction[]
+  ComTransactionSummary          ComTransactionSummary[]
+  ComPaymentMode                 ComPaymentMode[]
+  ComTerminalFunction            ComTerminalFunction[]
+
+  @@schema("commerce")
+}
+
+model ComMerchantAccount {
+  id                                 Int                                  @id @default(autoincrement())
+  comMerchantId                      Int                                  @unique
+  balance                            BigInt                               @default(0)
+  gsn                                Int                                  @default(0)
+  blameUser                          String
+  createdAt                          DateTime                             @default(now())
+  updatedAt                          DateTime
+  ComMerchant                        ComMerchant                          @relation(fields: [comMerchantId], references: [id])
+  ComMerchantAccountCreditGeneration ComMerchantAccountCreditGeneration[]
+  ComMerchantAccountSummary          ComMerchantAccountSummary[]
+  ComMerchantAccountTransaction      ComMerchantAccountTransaction[]
+
+  @@index([comMerchantId], type: Hash)
+  @@schema("commerce")
+}
+
+model ComMerchantAccountCreditGeneration {
+  id                            Int                            @id @default(autoincrement())
+  comMerchantAccountId          Int
+  value                         BigInt
+  date                          DateTime                       @default(now())
+  gsn                           Int
+  generationUser                String
+  blameUser                     String
+  createdAt                     DateTime                       @default(now())
+  updatedAt                     DateTime
+  ComMerchantAccount            ComMerchantAccount             @relation(fields: [comMerchantAccountId], references: [id])
+  ComMerchantAccountTransaction ComMerchantAccountTransaction?
+
+  @@unique([comMerchantAccountId, gsn])
+  @@index([comMerchantAccountId, gsn])
+  @@schema("commerce")
+}
+
+model ComMerchantAccountSummary {
+  id                   Int                @id @default(autoincrement())
+  date                 DateTime           @db.Date
+  comMerchantAccountId Int
+  totalCredit          BigInt             @default(0)
+  totalDebit           BigInt             @default(0)
+  blameUser            String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime
+  creditCount          Int                @default(0)
+  debitCount           Int                @default(0)
+  ComMerchantAccount   ComMerchantAccount @relation(fields: [comMerchantAccountId], references: [id])
+
+  @@unique([date, comMerchantAccountId])
+  @@index([date, comMerchantAccountId])
+  @@schema("commerce")
+}
+
+model ComMerchantAccountTransaction {
+  id                                 Int                                 @id @default(autoincrement())
+  comMerchantAccountId               Int
+  date                               DateTime                            @default(now())
+  value                              BigInt
+  type                               FlowType
+  comTransactionId                   Int?                                @unique
+  blameUser                          String
+  createdAt                          DateTime                            @default(now())
+  updatedAt                          DateTime
+  comAccountCreditGenId              Int?                                @unique
+  comRechargeOrderId                 Int?                                @unique
+  ComMerchantAccountCreditGeneration ComMerchantAccountCreditGeneration? @relation(fields: [comAccountCreditGenId], references: [id])
+  ComMerchantAccount                 ComMerchantAccount                  @relation(fields: [comMerchantAccountId], references: [id])
+  ComRechargeOrder                   ComRechargeOrder?                   @relation(fields: [comRechargeOrderId], references: [id])
+  ComTransaction                     ComTransaction?                     @relation(fields: [comTransactionId], references: [id])
+
+  @@index([comAccountCreditGenId], type: Hash)
+  @@index([comMerchantAccountId], type: Hash)
+  @@index([comRechargeOrderId], type: Hash)
+  @@index([comTransactionId], type: Hash)
+  @@schema("commerce")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ComMerchantCommision {
+  id                   Int                @id @default(autoincrement())
+  comMerchantProductId Int
+  startDate            DateTime           @db.Date
+  endDate              DateTime?          @db.Date
+  operationType        OperationType
+  type                 CommisionType
+  value                Int
+  blameUser            String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime
+  ComMerchantProduct   ComMerchantProduct @relation(fields: [comMerchantProductId], references: [id], onDelete: Cascade)
+
+  @@schema("commerce")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ComMerchantProduct {
+  id                            Int                             @id @default(autoincrement())
+  comMerchantId                 Int
+  type_old                      String?
+  subType                       Int
+  operationTypes                OperationType[]
+  dayTransactionLimit           Int?
+  dayTransactionValue           Int?
+  weekTransactionLimit          Int?
+  weekTransactionValue          Int?
+  monthTransactionLimit         Int?
+  monthTransactionValue         Int?
+  isActive                      Boolean                         @default(true)
+  blameUser                     String
+  createdAt                     DateTime                        @default(now())
+  updatedAt                     DateTime
+  endDate                       DateTime?
+  startDate                     DateTime                        @default(now())
+  type                          MediaType
+  ComMerchantCommision          ComMerchantCommision[]
+  ComMerchant                   ComMerchant                     @relation(fields: [comMerchantId], references: [id])
+  ComMerchantProductRestriction ComMerchantProductRestriction[]
+  ComProductPaymentRestriction  ComProductPaymentRestriction[]
+  ComTransaction                ComTransaction[]
+
+  @@unique([comMerchantId, type, subType])
+  @@index([comMerchantId], type: Hash)
+  @@index([comMerchantId, type, subType])
+  @@schema("commerce")
+}
+
+model ComMerchantProductRestriction {
+  id                   Int                @id @default(autoincrement())
+  comMerchantId        Int
+  toTerminalGroupId    Int
+  comMerchantProductId Int
+  blameUser            String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime
+  isActive             Boolean            @default(true)
+  ComMerchant          ComMerchant        @relation(fields: [comMerchantId], references: [id], onDelete: Cascade)
+  ComMerchantProduct   ComMerchantProduct @relation(fields: [comMerchantProductId], references: [id], onDelete: Cascade)
+
+  @@unique([comMerchantId, toTerminalGroupId, comMerchantProductId])
+  @@schema("commerce")
+}
+
+model ComMerchantWebHook {
+  id            Int         @id @default(autoincrement())
+  description   String
+  type          String
+  url           String
+  comMerchantId Int
+  isActive      Boolean     @default(true)
+  blameUser     String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime
+  ComMerchant   ComMerchant @relation(fields: [comMerchantId], references: [id])
+
+  @@unique([type, comMerchantId])
+  @@schema("commerce")
+}
+
+model ComOperationalFiles {
+  id                                    Int             @id @default(autoincrement())
+  fileName                              String?
+  generationTime                        String?
+  initialSyncTime                       DateTime?
+  deprecatedAt                          DateTime?
+  fileSize                              Int?
+  comReceiptCount                       Int             @default(0)
+  comMerchantProductCount               Int             @default(0)
+  isProcessed                           Boolean         @default(false)
+  lastUpdate                            DateTime?
+  blameUser                             String?
+  createdAt                             DateTime?       @default(now())
+  updatedAt                             DateTime
+  comPaymentModeCount                   Int             @default(0)
+  comTerminalFunctionCount              Int             @default(0)
+  draftEndtime                          DateTime?
+  draftMode                             Boolean?        @default(false)
+  comCashflowReasonCount                Int             @default(0)
+  lastComCashflowReasonId               Int?
+  lastComMerchantProductId              Int?
+  lastComPaymentModeId                  Int?
+  lastComReceiptId                      Int?
+  lastComTerminalFunctionId             Int?
+  comMerchantXComPaymentMode            Int             @default(0)
+  comMerchantXComTerminalFunction       Int             @default(0)
+  comPaymentModeRestriction             Int             @default(0)
+  comProductPaymentRestriction          Int             @default(0)
+  comTerminalFunctionRestriction        Int             @default(0)
+  lastComMerchantXComPaymentModeId      Int?
+  lastComMerchantXComTerminalFunctionId Int?
+  lastComPaymentModeRestrictionId       Int?
+  lastComProductPaymentRestrictionId    Int?
+  lastComTerminalFunctionRestrictionId  Int?
+  comMerchantXComPaymentModeCount       Int             @default(0)
+  comMerchantXComTerminalFunctionCount  Int             @default(0)
+  comPaymentModeRestrictionCount        Int             @default(0)
+  comProductPaymentRestrictionCount     Int             @default(0)
+  comTerminalFunctionRestrictionCount   Int             @default(0)
+  comMerchantProductRestrictionCount    Int             @default(0)
+  lastComMerchantProductRestrictionId   Int?
+  comPaymentVoucherReasonCount          Int             @default(0)
+  lastComPaymentVoucherReasonId         Int?
+  comPaymentModeRuleCount               Int             @default(0)
+  lastComPaymentModeRuleId              Int?
+  isCurrent                             Boolean?        @unique
+  tag                                   OperationalTag? @unique
+  approvalDate                          DateTime?
+  requestDate                           DateTime?
+  requestedTag                          OperationalTag? @unique
+  sysApprovalUserSub                    String?
+  sysRequestUserSub                     String?
+  comCommerceChannelCount               Int             @default(0)
+  comCommerceChannelTerminalCount       Int             @default(0)
+  lastComCommerceChannelId              Int?
+  lastComCommerceChannelTerminalId      Int?
+
+  @@unique([fileName, draftMode])
+  @@schema("commerce")
+}
+
+model ComPaymentMode {
+  id                           Int                            @id @default(autoincrement())
+  description                  String
+  isActive                     Boolean                        @default(true)
+  blameUser                    String
+  createdAt                    DateTime                       @default(now())
+  updatedAt                    DateTime
+  allowChange                  Boolean                        @default(true)
+  usualReceived                Int[]
+  paymentMethod                PaymentMethod                  @default(cash)
+  allowVoucher                 Boolean                        @default(false)
+  allowRechargeOrderRelease    Boolean                        @default(false)
+  ComInvoice                   ComInvoice[]
+  ComPaymentModeRestriction    ComPaymentModeRestriction[]
+  ComPaymentModeRule           ComPaymentModeRule[]
+  ComProductPaymentRestriction ComProductPaymentRestriction[]
+  ComRechargeOrder             ComRechargeOrder[]
+  ComRechargeOrder_old         ComRechargeOrder_old[]
+  ComSubscription              ComSubscription[]
+  ComTransaction               ComTransaction[]
+  ComTransactionSummary        ComTransactionSummary[]
+  ComMerchant                  ComMerchant[]
+
+  @@index([id, paymentMethod])
+  @@index([paymentMethod], type: Hash)
+  @@schema("commerce")
+}
+
+model ComPaymentModeRestriction {
+  id                Int            @id @default(autoincrement())
+  comMerchantId     Int
+  toTerminalGroupId Int
+  comPaymentModeId  Int
+  blameUser         String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime
+  isActive          Boolean        @default(true)
+  ComMerchant       ComMerchant    @relation(fields: [comMerchantId], references: [id])
+  ComPaymentMode    ComPaymentMode @relation(fields: [comPaymentModeId], references: [id])
+
+  @@unique([comMerchantId, toTerminalGroupId, comPaymentModeId])
+  @@schema("commerce")
+}
+
+model ComPaymentModeRule {
+  id                     Int                 @id @default(autoincrement())
+  comMerchantId          Int
+  comPaymentModeId       Int
+  comPaymentModeRuleType PaymentModeRuleType
+  weekdays               Weekday[]
+  startTime              DateTime?           @db.Time(6)
+  endTime                DateTime?           @db.Time(6)
+  intervalTime           Int?
+  value                  Int
+  toTerminalCode         Int?
+  toTerminalGroupId      Int?
+  toTransportOperatorId  Int?
+  isActive               Boolean             @default(true)
+  blameUser              String
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime
+  ComMerchant            ComMerchant         @relation(fields: [comMerchantId], references: [id])
+  ComPaymentMode         ComPaymentMode      @relation(fields: [comPaymentModeId], references: [id])
+
+  @@unique([comMerchantId, toTerminalGroupId, comPaymentModeId])
+  @@schema("commerce")
+}
+
+model ComPaymentOrder {
+  id                          Int                           @id @default(autoincrement())
+  value                       Int
+  paymentType                 PaymentType
+  externalOrderId             String?
+  externalInfo1               String?
+  externalInfo2               String?
+  requestDate                 DateTime
+  paymentDate                 DateTime?
+  expirationDate              DateTime?
+  cancelDate                  DateTime?
+  isActive                    Boolean                       @default(true)
+  comRechargeOrderId          Int?
+  comTransactionId            Int?
+  dvcThingThingName           String?
+  blameUser                   String
+  createdAt                   DateTime                      @default(now())
+  updatedAt                   DateTime
+  paymentStatus               PaymentOrderStatus
+  bankSlipId                  String?
+  externalInfo3               String?
+  externalInfo4               String?
+  organizationDocumentNumber  String?
+  billetUrl                   String?
+  ComRechargeOrder            ComRechargeOrder?             @relation(fields: [comRechargeOrderId], references: [id])
+  ComTransaction              ComTransaction?               @relation(fields: [comTransactionId], references: [id])
+  ComPaymentOrderLog          ComPaymentOrderLog[]
+  com_organization_account_dt com_organization_account_dt[]
+
+  @@index([comRechargeOrderId])
+  @@index([createdAt])
+  @@index([expirationDate])
+  @@index([externalOrderId], map: "idx_com_payment_order_external_order_id")
+  @@schema("commerce")
+}
+
+model ComPaymentOrderLog {
+  id                Int                 @id @default(autoincrement())
+  comPaymentOrderId Int
+  date              DateTime            @default(now())
+  type              PaymentOrderLogType
+  elapsedTime       Int?
+  requestEndpoint   String
+  requestBody       Json
+  errorCode         String?
+  errorMessage      String?
+  responseBody      Json?
+  approvedCode      String?
+  approvedMessage   String?
+  blameUser         String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  ComPaymentOrder   ComPaymentOrder     @relation(fields: [comPaymentOrderId], references: [id])
+
+  @@schema("commerce")
+}
+
+model ComPaymentVoucher {
+  id                                                                      Int                      @id @default(autoincrement())
+  rnd                                                                     Int
+  date                                                                    DateTime
+  voucherType                                                             ComVoucherType
+  expiration                                                              DateTime?
+  comPaymentVoucherReasonId                                               Int?
+  comment                                                                 String?
+  comOrigTransactionGuid                                                  String?                  @unique
+  comDestTransactionGuid                                                  String?                  @unique
+  toSysCode                                                               Int?
+  mediaId                                                                 String?
+  externalMediaId                                                         String?
+  value                                                                   Int
+  isProcessed                                                             Boolean                  @default(false)
+  processDate                                                             DateTime?
+  isActive                                                                Boolean                  @default(true)
+  blameUser                                                               String
+  createdAt                                                               DateTime                 @default(now())
+  updatedAt                                                               DateTime
+  payload                                                                 String?
+  comServiceGuid                                                          String?
+  toTerminalCode                                                          Int?
+  toTransportOperatorId                                                   Int?
+  medTransitProductId                                                     Int?
+  ComTransaction_ComPaymentVoucher_comDestTransactionGuidToComTransaction ComTransaction?          @relation("ComPaymentVoucher_comDestTransactionGuidToComTransaction", fields: [comDestTransactionGuid], references: [guid])
+  ComTransaction_ComPaymentVoucher_comOrigTransactionGuidToComTransaction ComTransaction?          @relation("ComPaymentVoucher_comOrigTransactionGuidToComTransaction", fields: [comOrigTransactionGuid], references: [guid])
+  ComPaymentVoucherReason                                                 ComPaymentVoucherReason? @relation(fields: [comPaymentVoucherReasonId], references: [id])
+
+  @@unique([id, rnd])
+  @@index([createdAt])
+  @@schema("commerce")
+}
+
+model ComPaymentVoucherReason {
+  id                Int                 @id @default(autoincrement())
+  description       String
+  isActive          Boolean             @default(true)
+  blameUser         String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  ComPaymentVoucher ComPaymentVoucher[]
+
+  @@schema("commerce")
+}
+
+model ComProductPaymentRestriction {
+  id                   Int                @id @default(autoincrement())
+  comMerchantId        Int
+  toTerminalGroupId    Int
+  comMerchantProductId Int
+  comPaymentModeId     Int?
+  blameUser            String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime
+  isActive             Boolean            @default(true)
+  ComMerchant          ComMerchant        @relation(fields: [comMerchantId], references: [id], onDelete: Cascade)
+  ComMerchantProduct   ComMerchantProduct @relation(fields: [comMerchantProductId], references: [id], onDelete: Cascade)
+  ComPaymentMode       ComPaymentMode?    @relation(fields: [comPaymentModeId], references: [id], onDelete: Cascade)
+
+  @@unique([comMerchantId, toTerminalGroupId, comMerchantProductId, comPaymentModeId])
+  @@schema("commerce")
+}
+
+model ComReceipt {
+  code          Int            @id
+  description   String
+  text          String
+  operationType OperationType?
+  mediaType     MediaType?
+  blameUser     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime
+  isActive      Boolean        @default(true)
+  tags          String[]
+
+  @@unique([operationType, mediaType])
+  @@schema("commerce")
+}
+
+model ComRechargeOrder {
+  id                              Int                            @id(map: "ComRechargeOrder_pkey1") @default(autoincrement())
+  comMerchantId                   Int
+  orderNumber                     String
+  date                            DateTime                       @default(now())
+  merchantOrderId                 String?
+  paymentDate                     DateTime?
+  paymentType                     PaymentType?
+  paymentUser                     String?
+  releaseDate                     DateTime?
+  isReleased                      Boolean                        @default(false)
+  cancelDate                      DateTime?
+  value                           Int
+  adminTax                        Int                            @default(0)
+  discount                        Int                            @default(0)
+  totalValue                      Int                            @default(0)
+  isProcessed                     Boolean                        @default(false)
+  isActive                        Boolean                        @default(true)
+  usrOrganizationId               Int?
+  blameUser                       String
+  createdAt                       DateTime                       @default(now())
+  updatedAt                       DateTime
+  cancelUser                      String?
+  comPaymentModeId                Int?
+  comRechargeOrderCancelReasonId  Int?
+  comRechargeOrderReleaseReasonId Int?
+  releaseObservation              String?
+  releaseUser                     String?
+  isPaid                          Boolean                        @default(false)
+  paymentObservation              String?
+  comInvoiceId                    Int?
+  isWaitingPayment                Boolean                        @default(false)
+  completeDate                    DateTime?
+  completeUser                    String?
+  isCompleted                     Boolean                        @default(false)
+  usrUserId                       Int?
+  externalOrganization            Int?
+  externalTransaction             Int?
+  externalSequence                Int?
+  externalStatus                  String?                        @db.VarChar(1)
+  commitedOnWholeSales            Boolean?
+  burServiceStationId             Int?
+  usrOrganizationAddressId        Int?
+  ComMerchantAccountTransaction   ComMerchantAccountTransaction?
+  ComPaymentOrder                 ComPaymentOrder[]
+  ComInvoice                      ComInvoice?                    @relation(fields: [comInvoiceId], references: [id])
+  ComMerchant                     ComMerchant                    @relation(fields: [comMerchantId], references: [id])
+  ComPaymentMode                  ComPaymentMode?                @relation(fields: [comPaymentModeId], references: [id])
+  ComRechargeOrderCancelReason    ComRechargeOrderCancelReason?  @relation(fields: [comRechargeOrderCancelReasonId], references: [id])
+  ComRechargeOrderReleaseReason   ComRechargeOrderReleaseReason? @relation(fields: [comRechargeOrderReleaseReasonId], references: [id])
+  ComRechargeOrderDetail          ComRechargeOrderDetail[]
+  com_organization_account_dt     com_organization_account_dt[]
+
+  @@index([externalOrganization, externalTransaction, externalSequence])
+  @@index([usrOrganizationId])
+  @@index([merchantOrderId], map: "idxorderid")
+  @@schema("commerce")
+}
+
+model ComRechargeOrderCancelReason {
+  id                   Int                    @id @default(autoincrement())
+  description          String
+  isActive             Boolean                @default(true)
+  blameUser            String
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  ComRechargeOrder     ComRechargeOrder[]
+  ComRechargeOrder_old ComRechargeOrder_old[]
+
+  @@schema("commerce")
+}
+
+model ComRechargeOrderDetail {
+  id                         Int                         @id(map: "ComRechargeOrderDetail_pkey1") @default(autoincrement())
+  comRechargeOrderId         Int
+  medMediaProductId          Int?
+  value                      Int
+  isActive                   Boolean                     @default(true)
+  blameUser                  String
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime
+  dispatchDate               DateTime?
+  isDispatched               Boolean                     @default(false)
+  medMediaCsn                String?
+  usrDocumentId              Int?
+  medMediaTypeId             Int?
+  medTransitProductCode      Int?
+  toIssuerCode               Int?
+  rechargeRule               RechargeRuleType            @default(mediaExists)
+  rechargeTokenCreated       Boolean                     @default(false)
+  medMediaTypeExternalId     Int?
+  medMediaSequence           Int?
+  externalOrganization       Int?
+  externalTransaction        Int?
+  externalSequence           Int?
+  externalIndex              Int?
+  externalStatus             String?                     @db.VarChar(1)
+  ComRechargeOrder           ComRechargeOrder            @relation(fields: [comRechargeOrderId], references: [id])
+  ComRechargeOrderDetailUser ComRechargeOrderDetailUser?
+
+  @@index([comRechargeOrderId], map: "ComRechargeOrderDetail_comRechargeOrderId_idx1")
+  @@index([externalOrganization, externalTransaction, externalSequence, externalIndex, externalStatus, toIssuerCode, medMediaTypeId, medMediaSequence], map: "ComRechargeOrderDetail_externalOrganization_externalTransa_idx1")
+  @@index([externalOrganization, externalTransaction, externalSequence, externalIndex])
+  @@index([externalTransaction, medMediaSequence])
+  @@index([medMediaCsn], map: "ComRechargeOrderDetail_medMediaCsn_idx1", type: Hash)
+  @@index([medMediaProductId], map: "ComRechargeOrderDetail_medMediaProductId_idx1", type: Hash)
+  @@index([toIssuerCode, medTransitProductCode], map: "ComRechargeOrderDetail_toIssuerCode_medTransitProductCode_idx1")
+  @@index([usrDocumentId], map: "ComRechargeOrderDetail_usrDocumentId_idx1", type: Hash)
+  @@schema("commerce")
+}
+
+model ComRechargeOrderDetailUser {
+  id                       Int                    @id @default(autoincrement())
+  usrUserName              String
+  usrUserBirthdate         String
+  usrUserMailAddress       String?
+  usrUserDocumentValue     String
+  usrUserPhone             String
+  usrUserAddressStreet     String
+  usrUserAddressNumber     String
+  usrUserAddressZipCode    String
+  usrUserAddressDistrict   String
+  usrUserAddressCity       String
+  usrUserAddressState      String
+  usrUserAddressCountry    String
+  comRechargeOrderDetailId Int                    @unique
+  blameUser                String
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime
+  usrUserGender            commerce_Gender
+  usrUserFiliation1        String?
+  usrUserFiliation2        String?
+  ComRechargeOrderDetail   ComRechargeOrderDetail @relation(fields: [comRechargeOrderDetailId], references: [id], onDelete: Cascade)
+
+  @@index([comRechargeOrderDetailId])
+  @@schema("commerce")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ComRechargeOrderDetail_old {
+  id                     Int                  @id(map: "ComRechargeOrderDetail_pkey") @default(autoincrement())
+  comRechargeOrderId     Int
+  medMediaProductId      Int?
+  value                  Int
+  isActive               Boolean              @default(true)
+  blameUser              String
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime
+  dispatchDate           DateTime?
+  isDispatched           Boolean              @default(false)
+  medMediaCsn            String?
+  usrDocumentId          Int?
+  medMediaTypeId         Int?
+  medTransitProductCode  Int?
+  toIssuerCode           Int?
+  rechargeRule           RechargeRuleType     @default(mediaExists)
+  rechargeTokenCreated   Boolean              @default(false)
+  medMediaTypeExternalId Int?
+  medMediaSequence       Int?
+  externalOrganization   Int?
+  externalTransaction    Int?
+  externalSequence       Int?
+  externalIndex          Int?
+  externalStatus         String?              @db.VarChar(1)
+  ComRechargeOrder_old   ComRechargeOrder_old @relation(fields: [comRechargeOrderId], references: [id], map: "ComRechargeOrderDetail_comRechargeOrderId_fkey")
+
+  @@index([comRechargeOrderId], map: "ComRechargeOrderDetail_comRechargeOrderId_idx")
+  @@index([externalOrganization, externalTransaction, externalSequence, externalIndex, externalStatus, toIssuerCode, medMediaTypeId, medMediaSequence], map: "ComRechargeOrderDetail_externalOrganization_IDX")
+  @@index([medMediaCsn], map: "ComRechargeOrderDetail_medMediaCsn_idx", type: Hash)
+  @@index([medMediaProductId], map: "ComRechargeOrderDetail_medMediaProductId_idx", type: Hash)
+  @@index([toIssuerCode, medTransitProductCode], map: "ComRechargeOrderDetail_toIssuerCode_medTransitProductCode_idx")
+  @@index([usrDocumentId], map: "ComRechargeOrderDetail_usrDocumentId_idx", type: Hash)
+  @@index([externalOrganization, externalTransaction, externalSequence, externalIndex], map: "idx_external_rechargeorderdt")
+  @@index([externalTransaction, medMediaSequence], map: "ix_ComRechargeOrderDetail_01")
+  @@schema("commerce")
+}
+
+model ComRechargeOrderReleaseReason {
+  id                   Int                    @id @default(autoincrement())
+  description          String
+  isActive             Boolean                @default(true)
+  blameUser            String
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  ComRechargeOrder     ComRechargeOrder[]
+  ComRechargeOrder_old ComRechargeOrder_old[]
+
+  @@schema("commerce")
+}
+
+model ComRechargeOrderTax {
+  id                        Int                         @id @default(autoincrement())
+  description               String
+  isDefault                 Boolean                     @default(false)
+  isActive                  Boolean                     @default(true)
+  blameUser                 String
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime
+  type                      RechargeOrderTaxType
+  ComMerchant               ComMerchant[]
+  ComRechargeOrderTaxDetail ComRechargeOrderTaxDetail[]
+  ComSubscription           ComSubscription[]
+
+  @@schema("commerce")
+}
+
+model ComRechargeOrderTaxDetail {
+  id                    Int                 @id @default(autoincrement())
+  type                  CommisionType
+  value                 Int
+  minValue              Int
+  startDate             DateTime            @default(now())
+  endDate               DateTime?
+  comRechargeOrderTaxId Int
+  blameUser             String
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime
+  ComRechargeOrderTax   ComRechargeOrderTax @relation(fields: [comRechargeOrderTaxId], references: [id])
+
+  @@index([comRechargeOrderTaxId])
+  @@schema("commerce")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ComRechargeOrder_old {
+  id                              Int                            @id(map: "ComRechargeOrder_pkey") @default(autoincrement())
+  comMerchantId                   Int
+  orderNumber                     String
+  date                            DateTime                       @default(now())
+  merchantOrderId                 String?
+  paymentDate                     DateTime?
+  paymentType                     PaymentType?
+  paymentUser                     String?
+  releaseDate                     DateTime?
+  isReleased                      Boolean                        @default(false)
+  cancelDate                      DateTime?
+  value                           Int
+  adminTax                        Int                            @default(0)
+  discount                        Int                            @default(0)
+  totalValue                      Int                            @default(0)
+  isProcessed                     Boolean                        @default(false)
+  isActive                        Boolean                        @default(true)
+  usrOrganizationId               Int?
+  blameUser                       String
+  createdAt                       DateTime                       @default(now())
+  updatedAt                       DateTime
+  cancelUser                      String?
+  comPaymentModeId                Int?
+  comRechargeOrderCancelReasonId  Int?
+  comRechargeOrderReleaseReasonId Int?
+  releaseObservation              String?
+  releaseUser                     String?
+  isPaid                          Boolean                        @default(false)
+  paymentObservation              String?
+  comInvoiceId                    Int?
+  isWaitingPayment                Boolean                        @default(false)
+  completeDate                    DateTime?
+  completeUser                    String?
+  isCompleted                     Boolean                        @default(false)
+  usrUserId                       Int?
+  externalOrganization            Int?
+  externalTransaction             Int?
+  externalSequence                Int?
+  externalStatus                  String?                        @db.VarChar(1)
+  commitedOnWholeSales            Boolean?
+  ComRechargeOrderDetail_old      ComRechargeOrderDetail_old[]
+  ComInvoice                      ComInvoice?                    @relation(fields: [comInvoiceId], references: [id], map: "ComRechargeOrder_comInvoiceId_fkey")
+  ComMerchant                     ComMerchant                    @relation(fields: [comMerchantId], references: [id], map: "ComRechargeOrder_comMerchantId_fkey")
+  ComPaymentMode                  ComPaymentMode?                @relation(fields: [comPaymentModeId], references: [id], map: "ComRechargeOrder_comPaymentModeId_fkey")
+  ComRechargeOrderCancelReason    ComRechargeOrderCancelReason?  @relation(fields: [comRechargeOrderCancelReasonId], references: [id], map: "ComRechargeOrder_comRechargeOrderCancelReasonId_fkey")
+  ComRechargeOrderReleaseReason   ComRechargeOrderReleaseReason? @relation(fields: [comRechargeOrderReleaseReasonId], references: [id], map: "ComRechargeOrder_comRechargeOrderReleaseReasonId_fkey")
+
+  @@index([usrOrganizationId], map: "idx_belem_organizationid")
+  @@index([externalOrganization, externalTransaction, externalSequence], map: "idx_external_rechargeordermt")
+  @@schema("commerce")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ComService {
+  guid                  String                  @id
+  comMerchantId         Int?
+  openDate              DateTime?
+  closeType             ServiceCloseType?
+  closeDate             DateTime?
+  isProcessed           Boolean                 @default(false)
+  isClosed              Boolean                 @default(false)
+  dvcThingThingName     String?
+  usrOperatorId         Int?
+  toTransportOperatorId Int?
+  toTerminalCode        Int?
+  blameUser             String
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime
+  location              Unsupported("point")?
+  closingPin            String?
+  closingPinRequired    Boolean?                @default(false)
+  pinExpiration         DateTime?
+  pinGeneratedBy        String?
+  checkPin              Int?
+  sessionNumber         Int?
+  toTerminalGroupId     Int?
+  ComCashflow           ComCashflow[]
+  ComMerchant           ComMerchant?            @relation(fields: [comMerchantId], references: [id])
+  ComTransaction        ComTransaction[]
+  ComTransactionSummary ComTransactionSummary[]
+
+  @@unique([checkPin, toTerminalCode, openDate])
+  @@index([comMerchantId, usrOperatorId])
+  @@index([guid, createdAt])
+  @@index([toTerminalCode, toTransportOperatorId])
+  @@index([toTerminalGroupId], type: Hash)
+  @@schema("commerce")
+}
+
+model ComSubscription {
+  id                      Int                       @id @default(autoincrement())
+  description             String
+  closeDay                Int                       @default(1)
+  dueDay                  Int                       @default(5)
+  comRechargeOrderTaxId   Int
+  comPaymentModeId        Int
+  blameUser               String
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime
+  isActive                Boolean                   @default(true)
+  ComInvoice              ComInvoice[]
+  ComMerchant             ComMerchant[]
+  ComPaymentMode          ComPaymentMode            @relation(fields: [comPaymentModeId], references: [id])
+  ComRechargeOrderTax     ComRechargeOrderTax       @relation(fields: [comRechargeOrderTaxId], references: [id])
+  ComSubscriptionFunction ComSubscriptionFunction[]
+
+  @@schema("commerce")
+}
+
+model ComSubscriptionFunction {
+  id              Int               @id @default(autoincrement())
+  code            String
+  description     String
+  blameUser       String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  ComSubscription ComSubscription[]
+
+  @@schema("commerce")
+}
+
+model ComTerminalFunction {
+  code                           Int                              @id
+  description                    String
+  comment                        String
+  isActive                       Boolean                          @default(true)
+  blameUser                      String
+  createdAt                      DateTime                         @default(now())
+  updatedAt                      DateTime
+  mediaType                      MediaType?
+  operationType                  OperationType?
+  ComTerminalFunctionRestriction ComTerminalFunctionRestriction[]
+  ComMerchant                    ComMerchant[]
+
+  @@schema("commerce")
+}
+
+model ComTerminalFunctionRestriction {
+  id                      Int                 @id @default(autoincrement())
+  comMerchantId           Int
+  toTerminalGroupId       Int
+  comTerminalFunctionCode Int
+  blameUser               String
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime
+  isActive                Boolean             @default(true)
+  ComMerchant             ComMerchant         @relation(fields: [comMerchantId], references: [id])
+  ComTerminalFunction     ComTerminalFunction @relation(fields: [comTerminalFunctionCode], references: [code])
+
+  @@unique([comMerchantId, toTerminalGroupId, comTerminalFunctionCode])
+  @@schema("commerce")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ComTransaction {
+  id                                                                         Int                            @id @default(autoincrement())
+  guid                                                                       String                         @unique
+  comServiceGuid                                                             String
+  comPaymentModeId                                                           Int?
+  date                                                                       DateTime
+  processDate                                                                DateTime?
+  value                                                                      Int
+  receivedValue                                                              Int
+  comissionType                                                              CommisionType?
+  comissionTypeValue                                                         Int?
+  comissionValue                                                             Int
+  type_old                                                                   String?
+  subType                                                                    Int
+  operationType                                                              OperationType
+  mediaId                                                                    String?
+  externalTransactionId                                                      String?
+  isProcessed                                                                Boolean                        @default(false)
+  isError                                                                    Boolean                        @default(false)
+  errorMessage                                                               String?
+  isActive                                                                   Boolean                        @default(true)
+  dvcThingThingName                                                          String?
+  blameUser                                                                  String
+  createdAt                                                                  DateTime                       @default(now())
+  updatedAt                                                                  DateTime
+  tvv                                                                        String?
+  comMerchantProductId                                                       Int?
+  acknowledged                                                               Boolean                        @default(false)
+  transactionNumber                                                          String                         @unique
+  comTransactionCancelFromGuid                                               String?                        @unique
+  type                                                                       MediaType
+  externalMediaId                                                            String?
+  toSysCode                                                                  Int?
+  abtWalletId                                                                Int?
+  isCancelling                                                               Boolean                        @default(false)
+  isPaymentComplete                                                          Boolean                        @default(false)
+  answerNsu                                                                  Int?
+  externalRequest                                                            Json?
+  nsu                                                                        Int?
+  toIssuerCode                                                               Int?
+  acquirer                                                                   String?
+  acquirerPaymentId                                                          String?
+  formatedLogical                                                            String?
+  ComExternalTransactionDetail                                               ComExternalTransactionDetail?
+  ComMerchantAccountTransaction                                              ComMerchantAccountTransaction?
+  ComPaymentOrder                                                            ComPaymentOrder[]
+  ComPaymentVoucher_ComPaymentVoucher_comDestTransactionGuidToComTransaction ComPaymentVoucher?             @relation("ComPaymentVoucher_comDestTransactionGuidToComTransaction")
+  ComPaymentVoucher_ComPaymentVoucher_comOrigTransactionGuidToComTransaction ComPaymentVoucher?             @relation("ComPaymentVoucher_comOrigTransactionGuidToComTransaction")
+  ComMerchantProduct                                                         ComMerchantProduct?            @relation(fields: [comMerchantProductId], references: [id])
+  ComPaymentMode                                                             ComPaymentMode?                @relation(fields: [comPaymentModeId], references: [id])
+  ComService                                                                 ComService                     @relation(fields: [comServiceGuid], references: [guid])
+  ComTransaction                                                             ComTransaction?                @relation("ComTransactionToComTransaction", fields: [comTransactionCancelFromGuid], references: [guid])
+  other_ComTransaction                                                       ComTransaction?                @relation("ComTransactionToComTransaction")
+  ComTransactionPaymentDetail                                                ComTransactionPaymentDetail[]
+
+  @@unique([guid, dvcThingThingName])
+  @@index([comServiceGuid], type: Hash)
+  @@index([guid, dvcThingThingName])
+  @@index([type, mediaId])
+  @@schema("commerce")
+}
+
+model ComTransactionPaymentDetail {
+  id               Int            @id @default(autoincrement())
+  comTransactionId Int
+  key              String
+  value            String
+  ComTransaction   ComTransaction @relation(fields: [comTransactionId], references: [id])
+
+  @@unique([comTransactionId, key])
+  @@schema("commerce")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ComTransactionSummary {
+  id                      Int             @id @default(autoincrement())
+  date                    DateTime        @db.Date
+  comMerchantId           Int
+  comServiceGuid          String
+  comPaymentModeId        Int?
+  type_old                String?
+  subType                 Int
+  operationType           OperationType
+  transactionCount        Int             @default(0)
+  transactionCountPerHour Int[]
+  transactionAmount       Int             @default(0)
+  receivedAmount          Int             @default(0)
+  comissionAmount         Int             @default(0)
+  errorCount              Int             @default(0)
+  blameUser               String
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime
+  comMerchantProductId    Int?
+  type                    MediaType?
+  toSysCode               Int?
+  toIssuerCode            Int?
+  ComMerchant             ComMerchant     @relation(fields: [comMerchantId], references: [id])
+  ComPaymentMode          ComPaymentMode? @relation(fields: [comPaymentModeId], references: [id])
+  ComService              ComService      @relation(fields: [comServiceGuid], references: [guid])
+
+  @@unique([date, comMerchantId, comServiceGuid, comPaymentModeId, type, subType, operationType, comMerchantProductId, toSysCode, toIssuerCode])
+  @@index([comServiceGuid])
+  @@index([date, comMerchantId])
+  @@index([date])
+  @@index([id, comPaymentModeId])
+  @@index([id, createdAt])
+  @@index([operationType, createdAt])
+  @@schema("commerce")
+}
+
+model com_organization_account_dt {
+  coadt_id                    Int                         @id @default(autoincrement())
+  coamt_id                    Int
+  coadt_type                  String                      @db.Char(1)
+  coadt_value                 Int
+  coadt_comment               String?
+  com_rechargeorderid         Int?
+  com_paymentorderid          Int?
+  coadt_regdate               DateTime                    @db.Timestamptz(6)
+  coadt_reguser               String
+  com_organization_account_mt com_organization_account_mt @relation(fields: [coamt_id], references: [coamt_id], onDelete: NoAction, onUpdate: NoAction)
+  ComPaymentOrder             ComPaymentOrder?            @relation(fields: [com_paymentorderid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ComRechargeOrder            ComRechargeOrder?           @relation(fields: [com_rechargeorderid], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("commerce")
+}
+
+model com_organization_account_mt {
+  coamt_id                    Int                           @id @default(autoincrement())
+  usr_organizationid          Int                           @unique(map: "com_organization_account_mt_usr_organizationid_idx")
+  coamt_credit                Int?
+  coamt_debit                 Int?
+  coamt_balance               Int?
+  coamt_regdate               DateTime                      @db.Timestamptz(6)
+  coamt_reguser               String
+  coamt_status                String                        @db.Char(1)
+  com_organization_account_dt com_organization_account_dt[]
+
+  @@schema("commerce")
+}
+
+model com_tax {
+  ct_id           Int             @id(map: "PK_com_tax") @default(autoincrement()) @db.SmallInt
+  ct_shortname    String?         @db.VarChar(50)
+  ct_description  String?
+  ct_externalid   String?         @db.VarChar(20)
+  ct_isactive     Boolean         @default(true)
+  ct_createdat_tz DateTime        @default(now()) @db.Timestamptz(6)
+  ct_updatedat_tz DateTime?       @db.Timestamptz(6)
+  ct_blameuser    String          @db.VarChar(320)
+  ct_taxtype      String?
+  ct_name         ComTaxType
+  com_taxdetail   com_taxdetail[]
+
+  @@schema("commerce")
+}
+
+model com_taxdetail {
+  ctd_id                Int       @id(map: "PK_com_taxdetail") @default(autoincrement())
+  ct_id                 Int?      @db.SmallInt
+  ctd_validitystartdate DateTime  @db.Date
+  ctd_value             String
+  ctd_divfactor         Int       @default(100) @db.SmallInt
+  ctd_createdat_tz      DateTime  @default(now()) @db.Timestamptz(6)
+  ctd_updatedat_tz      DateTime? @db.Timestamptz(6)
+  ctd_blameuser         String    @db.VarChar(320)
+  com_tax               com_tax?  @relation(fields: [ct_id], references: [ct_id], onDelete: Cascade, map: "fk_ct_ctd")
+
+  @@index([ct_id], map: "idx_ct_ctd")
+  @@schema("commerce")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model data_new {
+  medMediaProductId Int?
+  csn               BigInt?
+  formatedLogical   String?
+  mm_a              Boolean?
+  mm_h              Boolean?
+  mm_p              Boolean?
+  code              Int?
+  toIssuerCode      Int?
+
+  @@map("_data_new")
+  @@ignore
+  @@schema("public")
+}
+
+model awsdms_ddl_audit {
+  c_key    BigInt    @id @default(autoincrement())
+  c_time   DateTime? @db.Timestamp(6)
+  c_user   String?   @db.VarChar(64)
+  c_txn    String?   @db.VarChar(16)
+  c_tag    String?   @db.VarChar(24)
+  c_oid    Int?
+  c_name   String?   @db.VarChar(64)
+  c_schema String?   @db.VarChar(64)
+  c_ddlqry String?
+
+  @@schema("public")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model boleto_status {
+  status OrderStatus?
+
+  @@ignore
+  @@schema("public")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model card_number {
+  formatedLogical String? @db.VarChar
+
+  @@ignore
+  @@schema("public")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model card_record {
+  formatedLogical String?
+  description     String?
+
+  @@ignore
+  @@schema("public")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model formated_logical {
+  formatedLogical String?
+
+  @@ignore
+  @@schema("public")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model has_restricted_card {
+  count BigInt?
+
+  @@ignore
+  @@schema("public")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model recharge_list_stats {
+  exec_date          DateTime?
+  vehicles_online    Int?
+  last_recharge_list String?
+
+  @@ignore
+  @@schema("public")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model temp_sele {
+  medMediaProductId                     Int?
+  releaseDate                           DateTime?                    @db.Timestamp(6)
+  type                                  Unsupported("RechargeType")?
+  rsn                                   Int?
+  isProcessed                           Boolean?
+  rechargeToken                         String?
+  rechargeDate                          DateTime?                    @db.Timestamp(6)
+  isRecharged                           Boolean?
+  blameUser                             String?
+  createdAt                             DateTime?                    @db.Timestamptz(6)
+  updatedAt                             DateTime?                    @db.Timestamptz(6)
+  comRechargeOrderDetailId              Int?
+  isActive                              Boolean?
+  isTransfer                            Boolean?
+  medMediaProductRechargeTransferFromId String?
+  medMediaTransferId                    String?
+  samCsn                                String?
+  signature                             String?                      @db.Char(12)
+  value                                 BigInt?
+  usrOrganizationId                     Int?
+  csn                                   BigInt?
+  externalId                            String?
+  medTransitProductCode                 Int?
+  toIssuerCode                          Int?
+  toSysCode                             Int?
+  creditSerie                           Int?
+  dvcThingThingName                     String?
+  toTerminalCode                        String?
+  toTransportOperatorId                 String?
+  statusDate                            String?
+  liveDate                              String?
+  hotlistCompleteId                     String?
+  confirmationSequence                  String?
+  rechargeReason                        String?
+  wasMigrated                           Boolean?
+
+  @@ignore
+  @@schema("public")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model v_formated_logical {
+  formatedLogical String?
+
+  @@ignore
+  @@schema("public")
+}
+
+model BankBillet {
+  id     Int      @id @default(autoincrement())
+  code   String?  @db.VarChar(5)
+  tax    Decimal? @db.Decimal(10, 2)
+  active Boolean?
+  name   String?  @db.VarChar(100)
+
+  @@schema("salesportal")
+}
+
+model BankReturnFile {
+  id                       Int       @id @default(autoincrement())
+  salBankCode              String?   @db.VarChar(5)
+  fileNameOriginal         String?   @db.VarChar(255)
+  fileName                 String?   @db.VarChar(255)
+  isProcessed              Boolean?
+  isSuccess                Boolean?
+  totalRecords             Int?
+  totalValue               Decimal?  @db.Decimal(10, 2)
+  blameUser                String?   @db.VarChar(100)
+  createdAt                DateTime? @default(now())
+  updatedAt                DateTime
+  errorMessage             String?   @db.VarChar(400)
+  errorMessageDetail       String?   @db.VarChar(400)
+  paymentProcessFinishDate DateTime? @db.Timestamptz(6)
+  paymentProcessStartDate  DateTime? @db.Timestamptz(6)
+  proccessMode             String?   @db.VarChar(16)
+
+  @@schema("salesportal")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model BankReturnFileLine {
+  id                       Int       @id @default(autoincrement())
+  salBankReturnFileId      Int?
+  content                  String
+  isProcessed              Boolean
+  isSuccess                Boolean
+  errorMsg                 String?
+  processDate              DateTime?
+  blameUser                String?   @db.VarChar(100)
+  createdAt                DateTime? @default(now())
+  updatedAt                DateTime
+  comRechargeOrderId       Int?
+  lineNumber               Int
+  processValue             Decimal?  @db.Decimal(10, 2)
+  ispaymentprocessfinished Boolean?
+  isPaymentProcessFinished Boolean?
+  dueDate                  DateTime? @db.Date
+  paymentDate              DateTime? @db.Date
+  processPayedValue        Int?
+  paymentProcessFinishDate DateTime? @db.Timestamptz(6)
+
+  @@index([content], map: "idx01")
+  @@index([salBankReturnFileId], map: "idx_bankreturnfileline_salbankreturnfileid")
+  @@schema("salesportal")
+}
+
+model SalAd {
+  id          Int     @id(map: "SalesPortalAd_pkey") @default(autoincrement())
+  label       String  @db.VarChar(200)
+  description String  @db.VarChar(600)
+  imgPath     String  @db.VarChar(255)
+  type        String? @db.VarChar(16)
+
+  @@schema("salesportal")
+}
+
+model SalCompany {
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @db.VarChar(255)
+  document             String                 @unique(map: "idxsalesportalsalcompanydocument") @db.VarChar(30)
+  description          String                 @db.VarChar(250)
+  contactName          String?                @db.VarChar(50)
+  contactPhoneNbr      String?                @db.VarChar(50)
+  logoImagePath        String?                @db.VarChar(255)
+  addrZipCode          String                 @db.VarChar(30)
+  addrStreet           String                 @db.VarChar(255)
+  addrNbr              String                 @db.VarChar(20)
+  addrComplement       String?                @db.VarChar(255)
+  addrDistrict         String                 @db.VarChar(255)
+  addrCity             String                 @db.VarChar(255)
+  toSysCode            Int?
+  externalId           Int?
+  isActive             Boolean                @default(true)
+  blameUser            String?                @db.VarChar(100)
+  createdAt            DateTime?              @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime               @db.Timestamptz(6)
+  addrCountry          String                 @db.VarChar(50)
+  addrState            String                 @db.VarChar(30)
+  migrationStatus      String?                @default("finished") @db.VarChar(16)
+  SalCompanyCredential SalCompanyCredential[]
+  SalEmployee          SalEmployee[]
+  SalEmployeeGroup     SalEmployeeGroup[]
+  SalImportFile        SalImportFile[]
+  SalImportFileLine    SalImportFileLine[]
+  SalOrder             SalOrder[]
+  SalOrderItem         SalOrderItem[]
+
+  @@schema("salesportal")
+}
+
+model SalCompanyCredential {
+  id           Int        @id(map: "SalCredentialId_pkey") @default(autoincrement())
+  salCompanyId Int
+  secUserId    Int
+  SalCompany   SalCompany @relation(fields: [salCompanyId], references: [id], map: "SalesPortal_salCompanyId_fkey")
+  SecUser      SecUser    @relation(fields: [secUserId], references: [id], map: "SecUserId_secUserId_fkey")
+
+  @@unique([salCompanyId, secUserId])
+  @@schema("salesportal")
+}
+
+model SalEmployee {
+  id                 Int                 @id @default(autoincrement())
+  salCompanyId       Int
+  document           String?             @db.VarChar(30)
+  name               String              @db.VarChar(120)
+  birthDate          DateTime            @db.Timestamptz(6)
+  hrID               String?             @db.VarChar(50)
+  motherName         String?             @db.VarChar(120)
+  dailyValue         Int?
+  SalEmployeeGroupId Int?
+  cardNumber         String?             @db.VarChar(100)
+  addrZipCode        String?             @db.VarChar(10)
+  addrStreet         String?             @db.VarChar(255)
+  addrNbr            String?             @db.VarChar(30)
+  addrComplement     String?             @db.VarChar(255)
+  addrDistrict       String?             @db.VarChar(255)
+  addrCity           String?             @db.VarChar(100)
+  toSysCode          Int?
+  externalId         BigInt?
+  isActive           Boolean             @default(true)
+  blameUser          String?             @db.VarChar(255)
+  createdAt          DateTime?           @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime?           @default(now()) @db.Timestamptz(6)
+  addrCountry        String?             @db.VarChar(30)
+  addrState          String?             @db.VarChar(30)
+  email              String?             @db.VarChar(100)
+  phone              String?             @db.VarChar(100)
+  gender             salesportal_Gender?
+  nomeSocial         String?             @db.VarChar(400)
+  userType           Int?
+  SalEmployeeGroup   SalEmployeeGroup?   @relation(fields: [SalEmployeeGroupId], references: [id])
+  SalCompany         SalCompany          @relation(fields: [salCompanyId], references: [id])
+  SalOrderItem       SalOrderItem[]
+
+  @@index([name, salCompanyId], map: "idx0234nome")
+  @@index([cardNumber], map: "idx_salemployee_cardnumber")
+  @@index([document], map: "idx_salemployee_document")
+  @@index([document], map: "idxdocument")
+  @@index([document, salCompanyId], map: "idxdocumentid")
+  @@index([cardNumber], map: "idxoncard")
+  @@index([userType, document], map: "ix_usertype_document")
+  @@schema("salesportal")
+}
+
+model SalEmployeeGroup {
+  id              Int           @id @default(autoincrement())
+  salCompanyId    Int
+  description     String        @db.VarChar(255)
+  isActive        Boolean       @default(true)
+  blameUser       String?       @db.VarChar(255)
+  createdAt       DateTime?     @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime      @db.Timestamptz(6)
+  longDescription String?       @db.VarChar(255)
+  SalEmployee     SalEmployee[]
+  SalCompany      SalCompany    @relation(fields: [salCompanyId], references: [id])
+
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model SalEmployee_backup {
+  id                 Int?
+  salCompanyId       Int?
+  document           String?             @db.VarChar(30)
+  name               String?             @db.VarChar(120)
+  birthDate          DateTime?           @db.Timestamptz(6)
+  hrID               String?             @db.VarChar(50)
+  motherName         String?             @db.VarChar(120)
+  dailyValue         Int?
+  SalEmployeeGroupId Int?
+  cardNumber         String?             @db.VarChar(100)
+  addrZipCode        String?             @db.VarChar(10)
+  addrStreet         String?             @db.VarChar(255)
+  addrNbr            String?             @db.VarChar(30)
+  addrComplement     String?             @db.VarChar(255)
+  addrDistrict       String?             @db.VarChar(255)
+  addrCity           String?             @db.VarChar(100)
+  toSysCode          Int?
+  externalId         BigInt?
+  isActive           Boolean?
+  blameUser          String?             @db.VarChar(255)
+  createdAt          DateTime?           @db.Timestamptz(6)
+  updatedAt          DateTime?           @db.Timestamptz(6)
+  addrCountry        String?             @db.VarChar(30)
+  addrState          String?             @db.VarChar(30)
+  email              String?             @db.VarChar(100)
+  phone              String?             @db.VarChar(100)
+  gender             salesportal_Gender?
+  nomeSocial         String?             @db.VarChar(400)
+  userType           Int?
+  formatedLogical    String?             @db.VarChar(50)
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+model SalImportFile {
+  id                         Int                       @id @default(autoincrement())
+  salCompanyId               Int
+  fileName                   String                    @db.VarChar(255)
+  fileType                   FileType
+  isProcessed                Boolean
+  isSuccess                  Boolean
+  blameUser                  String?                   @db.VarChar(100)
+  createdAt                  DateTime?                 @default(now())
+  updatedAt                  DateTime
+  errorMessage               String?                   @db.VarChar(400)
+  salOrderDeliveryLocationId Int?
+  errorMessageDetail         String?                   @db.VarChar(400)
+  SalCompany                 SalCompany                @relation(fields: [salCompanyId], references: [id], map: "SalImportFile_empCompanyId_fkey")
+  SalOrderDeliveryLocation   SalOrderDeliveryLocation? @relation(fields: [salOrderDeliveryLocationId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_salorder_deliverylocation")
+  SalImportFileLine          SalImportFileLine[]
+  SalOrder                   SalOrder[]
+
+  @@schema("salesportal")
+}
+
+model SalImportFileLine {
+  id              Int           @id @default(autoincrement())
+  salImportFileId Int
+  salCompanyId    Int
+  content         String
+  isProcessed     Boolean
+  isSuccess       Boolean
+  errorMsg        String?
+  processDate     DateTime?     @db.Timestamptz(6)
+  blameUser       String?       @db.VarChar(100)
+  createdAt       DateTime?     @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime      @db.Timestamptz(6)
+  lineNumber      Int
+  SalCompany      SalCompany    @relation(fields: [salCompanyId], references: [id], map: "SalImportFileLine_empCompanyId_fkey")
+  SalImportFile   SalImportFile @relation(fields: [salImportFileId], references: [id], map: "SalImportFileLine_empImportFileId_fkey")
+
+  @@schema("salesportal")
+}
+
+model SalOrder {
+  id                         Int                       @id @default(autoincrement())
+  salCompanyId               Int
+  date                       DateTime                  @db.Timestamptz(6)
+  totalValue                 Int
+  adminTax                   Int
+  isPaid                     Boolean
+  paymentDate                DateTime?                 @db.Timestamptz(6)
+  isReleased                 Boolean
+  releaseDate                DateTime?                 @db.Timestamptz(6)
+  cancelDate                 DateTime?                 @db.Timestamptz(6)
+  cancelUser                 String?
+  isActive                   Boolean
+  orderType                  OrderType
+  salImportFileId            Int?
+  billetFilePath             String?
+  paymentTransferCode        String?
+  toSysCode                  Int?
+  externalId                 Int?
+  blameUser                  String?
+  createdAt                  DateTime?                 @default(now()) @db.Timestamptz(6)
+  updatedAt                  DateTime                  @db.Timestamptz(6)
+  paymentMode                PaymentMode?
+  status                     OrderStatus               @default(new)
+  isProcessed                Boolean                   @default(false)
+  processMessage             String?
+  salOrderDeliveryLocationId Int?
+  paymentObservation         String?                   @db.VarChar(255)
+  inconsistencyReason        String?                   @db.VarChar(255)
+  isOrderReleasedMailSent    Boolean?                  @default(false)
+  orderReleasedMailSentDate  DateTime?                 @db.Timestamp(6)
+  SalCompany                 SalCompany                @relation(fields: [salCompanyId], references: [id])
+  SalImportFile              SalImportFile?            @relation(fields: [salImportFileId], references: [id])
+  SalOrderDeliveryLocation   SalOrderDeliveryLocation? @relation(fields: [salOrderDeliveryLocationId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_salorder_deliverylocation")
+  SalOrderItem               SalOrderItem[]
+
+  @@index([salCompanyId], map: "idx_salorder_salcompanyid")
+  @@index([externalId], map: "idxexternalid")
+  @@schema("salesportal")
+}
+
+model SalOrderDeliveryLocation {
+  id            Int             @id @default(autoincrement())
+  name          String          @db.VarChar(255)
+  tax           Int?
+  isActive      Boolean?        @default(true)
+  SalImportFile SalImportFile[]
+  SalOrder      SalOrder[]
+
+  @@schema("salesportal")
+}
+
+model SalOrderItem {
+  id            Int         @id @default(autoincrement())
+  salOrderId    Int
+  salCompanyId  Int
+  salEmployeeId Int
+  value         Int
+  externalId    Int?
+  cardNumber    String?     @db.VarChar(20)
+  SalCompany    SalCompany  @relation(fields: [salCompanyId], references: [id], map: "SalOrderItem_empCompanyId_fkey")
+  SalOrder      SalOrder    @relation(fields: [salOrderId], references: [id], map: "SalOrderItem_orderId_fkey")
+  SalEmployee   SalEmployee @relation(fields: [salEmployeeId], references: [id], map: "SalOrderItem_usrUserId_fkey")
+
+  @@unique([salOrderId, salEmployeeId], map: "iuniqueorder")
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model SalOrderItem_backup {
+  id            Int?
+  salOrderId    Int?
+  salCompanyId  Int?
+  salEmployeeId Int?
+  value         Int?
+  externalId    Int?
+  cardNumber    String? @db.VarChar(20)
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model SalOrderItem_excluidos {
+  id            Int?
+  salOrderId    Int?
+  salCompanyId  Int?
+  salEmployeeId Int?
+  value         Int?
+  externalId    Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model SalOrder_excluidos {
+  id                         Int?
+  salCompanyId               Int?
+  date                       DateTime?    @db.Timestamptz(6)
+  totalValue                 Int?
+  adminTax                   Int?
+  isPaid                     Boolean?
+  paymentDate                DateTime?    @db.Timestamptz(6)
+  isReleased                 Boolean?
+  releaseDate                DateTime?    @db.Timestamptz(6)
+  cancelDate                 DateTime?    @db.Timestamptz(6)
+  cancelUser                 String?
+  isActive                   Boolean?
+  orderType                  OrderType?
+  salImportFileId            Int?
+  billetFilePath             String?
+  paymentTransferCode        String?
+  toSysCode                  Int?
+  externalId                 Int?
+  blameUser                  String?
+  createdAt                  DateTime?    @db.Timestamptz(6)
+  updatedAt                  DateTime?    @db.Timestamptz(6)
+  paymentMode                PaymentMode?
+  status                     OrderStatus?
+  isProcessed                Boolean?
+  processMessage             String?
+  salOrderDeliveryLocationId Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model SalParameters {
+  age                  Boolean?
+  minOrder             Int?
+  maxOrder             Int?
+  secondCopyValue      Int?
+  id                   Int      @id(map: "pk_salparameters_id") @default(autoincrement())
+  systemVersion        String?  @db.VarChar(25)
+  systemProjectId      String?  @db.VarChar(10)
+  taxValue01           Decimal? @db.Decimal(10, 2)
+  taxDescValue01       String?  @db.VarChar(30)
+  taxDeliveryValue     Decimal? @db.Decimal(10, 2)
+  taxDescDeliveryValue String?  @db.VarChar(30)
+  numberDaysBill       Int?
+  masterPassword       String?  @db.VarChar(255)
+  usrdocumenttypeid    String?  @db.VarChar(100)
+
+  @@schema("salesportal")
+}
+
+model SalPoliciesDocumentsParameter {
+  id            Int     @id @default(autoincrement())
+  use_term_text String?
+  lgpd_text     String?
+
+  @@schema("salesportal")
+}
+
+model UsrCardStatus {
+  id          Int       @id @default(autoincrement())
+  cpf         String    @db.VarChar(50)
+  cardNumber  String?   @db.VarChar(20)
+  isActive    Boolean?
+  recordDate  DateTime? @db.Timestamp(6)
+  description String?   @db.VarChar(255)
+  updateat    DateTime? @db.Timestamp(6)
+
+  @@schema("salesportal")
+}
+
+model UsrCardStatus_2 {
+  id          Int       @id(map: "UsrCardStatus2_pkey") @default(autoincrement())
+  cpf         String    @db.VarChar(50)
+  cardNumber  String?   @db.VarChar(20)
+  isActive    Boolean?
+  recordDate  DateTime? @db.Timestamp(6)
+  description String?   @db.VarChar(255)
+  updateat    DateTime? @db.Timestamp(6)
+
+  @@index([cardNumber], map: "idx_usrcardstatus_cardnumber")
+  @@index([cpf], map: "idx_usrcardstatus_cpf")
+  @@schema("salesportal")
+}
+
+model cardaccount_awakening {
+  id            Int       @id @default(autoincrement())
+  createdat     DateTime? @default(now()) @db.Timestamp(6)
+  cac_trandate  DateTime? @db.Timestamp(6)
+  cac_type      String?
+  cac_tranvalue Int?
+  cac_status    String?
+  cac_rsn       Int?
+  cac_key1      Int?
+  cac_key2      Int?
+  cac_key3      Int?
+  cac_key4      Int?
+
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model cards_hot {
+  usr_id                Int?
+  numero_cartao         String? @db.VarChar(355)
+  numero_interno_cartao String? @db.VarChar(355)
+  status_cartao         String? @db.VarChar(10)
+  data_impressao        String? @db.VarChar(100)
+  iss_id                Int?
+  cd_id                 Int?
+
+  @@index([usr_id])
+  @@index([data_impressao(sort: Desc)], map: "idx_cards_hot_data_impressao")
+  @@index([numero_cartao], map: "idx_cards_hot_numero_cartao")
+  @@index([usr_id], map: "idx_cards_hot_usr_id")
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model cards_import {
+  usr_id                Int?
+  numero_cartao         String? @db.VarChar(355)
+  numero_interno_cartao String? @db.VarChar(355)
+  status_cartao         String? @db.VarChar(10)
+  data_impressao        String? @db.VarChar(100)
+  iss_id                Int?
+  cd_id                 Int?
+
+  @@index([usr_id])
+  @@index([data_impressao(sort: Desc)], map: "idx_cards_import_data_impressao")
+  @@index([numero_cartao], map: "idx_cards_import_numero_cartao")
+  @@index([usr_id], map: "idx_cards_import_usr_id")
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model diferenca_qtd_employees_rechargeinfo {
+  doc_salcompany       String? @db.VarChar(30)
+  id_company           Int?
+  id_organization      Int?
+  qtd_employees        BigInt?
+  qtd_employees_import BigInt?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model med_lista_chip_morto {
+  cpf           String?
+  isProcessed   Boolean?
+  cartao_antigo String?   @db.VarChar
+  cartao_novo   String?
+  usr_name      String?
+  id            Int?
+  csn           BigInt?
+  idkey         Int       @default(autoincrement())
+  regdate       DateTime? @db.Timestamptz(6)
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model migration_control {
+  sal_company_id Int?
+  old_id         Int?
+  new_id         Int?
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model pedidos_legado {
+  data_liberacao   DateTime? @db.Date
+  cartao           String?   @db.VarChar(4000)
+  ri_id            Decimal?  @db.Decimal(10, 0)
+  prv_id           Decimal?  @db.Decimal(10, 0)
+  rod_credits      Decimal?  @db.Decimal(10, 0)
+  ristf_name       String?   @db.VarChar(100)
+  ristf_birthdate  DateTime? @db.Date
+  ristf_namemother String?   @db.VarChar(100)
+  cpf              String?   @db.VarChar(35)
+  rom_tranid       Decimal?  @db.Decimal(10, 0)
+  rom_receiptnbr   Decimal?  @db.Decimal(10, 0)
+  isActive         Boolean?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model rechargeinfo_staffs_import {
+  ri_id            Int?
+  prv_id           Int?
+  matricula        String?   @db.VarChar(255)
+  nome_funcionario String?   @db.VarChar(255)
+  data_nascimento  DateTime? @db.Date
+  nome_mae         String?   @db.VarChar(255)
+  ristf_docnbr     String?   @db.VarChar(255)
+  ristf_docnbr2    String?   @db.VarChar(255)
+  usr_id           Int?
+
+  @@index([prv_id], map: "idx_rechargeinfo_staffs_import_prv_id")
+  @@index([ristf_docnbr], map: "idx_rechargeinfo_staffs_import_ristf_docnbr")
+  @@ignore
+  @@schema("salesportal")
+}
+
+model resultado_verifica_recarga {
+  id            Int       @id @default(autoincrement())
+  cpf           String    @db.VarChar(11)
+  csn           String    @db.VarChar(20)
+  resultado     String
+  status_done   Boolean?  @default(false)
+  valor_recarga Decimal?  @db.Decimal(10, 2)
+  data_registro DateTime? @default(now()) @db.Timestamp(6)
+  numero_cartao String?   @db.VarChar(30)
+
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_29 {
+  id                        BigInt?
+  tipo_registro             String?   @db.VarChar
+  numero_pedido             String?   @db.VarChar
+  codigo_inscricao          String?   @db.VarChar
+  numero_inscricao          String?   @db.VarChar
+  nosso_numero              String?   @db.VarChar
+  nosso_numero_simplificado String?   @db.VarChar
+  valor                     Decimal?  @db.Decimal
+  valor_100                 Decimal?  @db.Decimal
+  data_pagamento            String?   @db.VarChar
+  errormsg                  String?   @db.VarChar
+  createdat                 DateTime? @db.Timestamp(6)
+  linenumber                Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_30 {
+  id                        BigInt?
+  tipo_registro             String?   @db.VarChar
+  numero_pedido             String?   @db.VarChar
+  codigo_inscricao          String?   @db.VarChar
+  numero_inscricao          String?   @db.VarChar
+  nosso_numero              String?   @db.VarChar
+  nosso_numero_simplificado String?   @db.VarChar
+  valor                     Decimal?  @db.Decimal
+  valor_100                 Decimal?  @db.Decimal
+  data_pagamento            String?   @db.VarChar
+  errormsg                  String?   @db.VarChar
+  createdat                 DateTime? @db.Timestamp(6)
+  linenumber                Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_ajustes_cartao_sem_cpf {
+  document        String?   @db.VarChar(30)
+  cardNumber      String?   @db.VarChar(100)
+  csn             BigInt?
+  recordDate      DateTime?
+  name            String?   @db.VarChar(120)
+  cartaoformatado String?   @db.VarChar(4000)
+  user_id_correct Int?
+  type            Int?
+  id              Int       @default(autoincrement())
+  regdate         DateTime? @db.Timestamptz(6)
+  id_key          Int       @default(autoincrement())
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_caso_jeremias_media {
+  id                    Int?
+  sequence              Int?
+  checkDig              Int?
+  formatedLogical       String?
+  isProcessed           Boolean?
+  csn                   BigInt?
+  isCsnExtended         Boolean?
+  sizeInKB              Int?
+  tagType               Unsupported("TagType")?
+  medMediaTypeId        Int?
+  blameUser             String?
+  createdAt             DateTime?
+  updatedAt             DateTime?
+  isActive              Boolean?
+  isHotlisted           Boolean?
+  recordDate            DateTime?
+  usrUserHash           String?
+  usrUserId             Int?
+  usrOrganizationId     Int?
+  reissueSequence       Int?
+  toIssuerCode          Int?
+  activePersoOrderId    Int?
+  usrTypeIds            Int[]
+  medMediaReissueFromId Int?
+  externalId            BigInt?
+  toSysCode             Int?
+  bss_id                Int?
+  medMediaTemplateId    Int?                    @db.SmallInt
+  paymentTransactionId  Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_cpf_problems {
+  cpf      String? @db.VarChar(30)
+  commerce Int?
+  cartao   String?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_faltosos {
+  usrdoc_number String?   @db.VarChar(50)
+  usr_name      String?   @db.VarChar(120)
+  usr_birthdate DateTime? @db.Date
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_pagos {
+  id Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_previa_120922024 {
+  datapagamento         DateTime? @db.Date
+  entrega               String?   @db.VarChar(255)
+  empresa               String?   @db.VarChar(255)
+  func_name             String?
+  cpf                   String?
+  formatedLogical       String?
+  datacriacao_user      DateTime?
+  datacriacao_documento DateTime?
+  taxa                  Decimal?  @db.Decimal
+  commerce              Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_previa_130922024 {
+  datapagamento         DateTime? @db.Date
+  entrega               String?   @db.VarChar(255)
+  empresa               String?   @db.VarChar(255)
+  func_name             String?
+  cpf                   String?
+  formatedLogical       String?
+  datacriacao_user      DateTime?
+  datacriacao_documento DateTime?
+  taxa                  Decimal?  @db.Decimal
+  commerce              Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_previa_130922024_formosa {
+  datapagamento         DateTime? @db.Date
+  entrega               String?   @db.VarChar(255)
+  empresa               String?   @db.VarChar(255)
+  func_name             String?
+  cpf                   String?
+  formatedLogical       String?
+  datacriacao_user      DateTime?
+  datacriacao_documento DateTime?
+  taxa                  Decimal?  @db.Decimal
+  commerce              Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_previa_270922024_beneficio_facil {
+  datapagamento         DateTime? @db.Date
+  entrega               String?   @db.VarChar(255)
+  empresa               String?   @db.VarChar(255)
+  func_name             String?
+  cpf                   String?
+  formatedLogical       String?
+  datacriacao_user      DateTime?
+  datacriacao_documento DateTime?
+  taxa                  Decimal?  @db.Decimal
+  commerce              Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tmp_sem_recarga {
+  format_card_number String?
+  commerce           Int?
+  value              Int?
+  csn                BigInt?
+  rsn                Int?
+  qtd_recargas       BigInt?
+  cpf                String? @db.VarChar(30)
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+model tw_providers {
+  id                    Int       @id(map: "tw_providers2_pkey") @default(autoincrement())
+  prv_id                BigInt?
+  prv_desc              String?   @db.VarChar(90)
+  prv_contactdepartment String?   @db.VarChar(50)
+  prvinf_psw            String?   @db.VarChar(60)
+  st_code               String?   @db.Char(2)
+  prvadd_address        String?   @db.VarChar(200)
+  prvadd_addnbr         String?   @db.VarChar(15)
+  prvadd_addcomp        String?   @db.VarChar(50)
+  prvadd_district       String?   @db.VarChar(100)
+  prvadd_city           String?   @db.VarChar(100)
+  prvadd_zip            String?   @db.Char(8)
+  prvdoc_number         String?   @db.VarChar(50)
+  prv_regdate           DateTime? @db.Date
+  is_migrated           Boolean?
+  data_migration        DateTime? @db.Timestamptz(6)
+
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model user_documents_import {
+  usr_id              Int?
+  sequencia_documento Int?
+  tipo_documento      String? @db.VarChar(20)
+  numero_documento    String? @db.VarChar(35)
+  status_documento    String? @db.VarChar(1)
+
+  @@index([numero_documento], map: "idx_user_documents_import_numero_documento2")
+  @@index([numero_documento, tipo_documento], map: "idx_user_documents_import_tipo_documento2")
+  @@index([usr_id], map: "idx_user_documents_import_usr_id2")
+  @@index([usr_id, tipo_documento, numero_documento], map: "user_documents_import_usr_id_idx23")
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model user_documents_import_backup {
+  usr_id              Int?
+  sequencia_documento Int?
+  tipo_documento      String? @db.VarChar(255)
+  numero_documento    String? @db.VarChar(255)
+  status_documento    String? @db.VarChar(255)
+
+  @@index([numero_documento], map: "idx_user_documents_import_numero_documento")
+  @@index([tipo_documento], map: "idx_user_documents_import_tipo_documento")
+  @@index([usr_id], map: "idx_user_documents_import_usr_id")
+  @@index([usr_id], map: "user_documents_import_usr_id_idx")
+  @@index([usr_id, tipo_documento, numero_documento], map: "user_documents_import_usr_id_idx2")
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model v_usr_id {
+  usr_id Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model vw_temp_primeira_via02 {
+  document    String?   @db.VarChar(30)
+  cpf         String?   @db.VarChar(30)
+  company     String?   @db.VarChar(255)
+  name        String?   @db.VarChar(120)
+  datapedido  DateTime? @db.Timestamptz(6)
+  value       Int?
+  cardNumber  String?   @db.VarChar(100)
+  paymentDate DateTime? @db.Timestamptz(6)
+  commerce    Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+model SecUser {
+  id                    Int                    @id(map: "SecUserId_pkey") @default(autoincrement())
+  name                  String                 @db.VarChar(50)
+  email                 String                 @unique(map: "secuniqueindexsecuser") @db.VarChar(50)
+  password              String                 @db.VarChar(255)
+  document              String                 @unique(map: "secuniquedocumentsecuser") @db.VarChar(100)
+  photoPath             String?                @db.VarChar(200)
+  uuid                  String?                @db.Uuid
+  isAdmin               Boolean
+  isSalesPortal         Boolean
+  isApp                 Boolean
+  reset                 Boolean
+  isActive              Boolean                @default(true)
+  blameUser             String?                @db.VarChar(100)
+  createdAt             DateTime?              @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime               @db.Timestamptz(6)
+  lastLoginDate         DateTime?              @db.Timestamptz(6)
+  code                  Decimal?               @db.Decimal(6, 0)
+  externalExpoPushToken String?                @db.VarChar(50)
+  newemail              String?                @db.VarChar(50)
+  SalCompanyCredential  SalCompanyCredential[]
+
+  @@schema("security")
+}
+
+model UsrAddress {
+  id                                           Int         @id @default(autoincrement())
+  type                                         AddressType
+  street                                       String
+  number                                       String
+  complement                                   String?
+  zipCode                                      String
+  city                                         String
+  state                                        String
+  country                                      String
+  usrUserId                                    Int
+  isActive                                     Boolean     @default(true)
+  blameUser                                    String
+  createdAt                                    DateTime    @default(now())
+  updatedAt                                    DateTime
+  district                                     String
+  isMain                                       Boolean?
+  externalId                                   Int?        @unique
+  UsrUser_UsrAddress_usrUserIdToUsrUser        UsrUser     @relation("UsrAddress_usrUserIdToUsrUser", fields: [usrUserId], references: [id], onDelete: Cascade)
+  UsrUser_UsrUser_usrMainAddressIdToUsrAddress UsrUser?    @relation("UsrUser_usrMainAddressIdToUsrAddress")
+
+  @@index([usrUserId, street, number], map: "idxtemp_address")
+  @@schema("user")
+}
+
+model UsrComment {
+  id                                           Int      @id @default(autoincrement())
+  usrUserId                                    Int
+  comment                                      String
+  blameUser                                    String
+  createdAt                                    DateTime @default(now())
+  updatedAt                                    DateTime
+  UsrUser_UsrComment_usrUserIdToUsrUser        UsrUser  @relation("UsrComment_usrUserIdToUsrUser", fields: [usrUserId], references: [id], onDelete: Cascade)
+  UsrUser_UsrUser_usrMainCommentIdToUsrComment UsrUser? @relation("UsrUser_usrMainCommentIdToUsrComment")
+
+  @@schema("user")
+}
+
+model UsrDisability {
+  id                       Int                      @id @default(autoincrement())
+  usrUserId                Int
+  usrIcdId                 Int
+  usrServiceStationId      Int?
+  usrDisabilityEquipmentId Int?
+  approvalType             ApprovalType
+  registration             DateTime?                @db.Date
+  doctorName               String?
+  doctorRegistration       String?
+  validity                 DateTime?                @db.Date
+  comment                  String?
+  isActive                 Boolean                  @default(true)
+  blameUser                String
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime
+  externalId               Int?                     @unique
+  stamp                    String?
+  UsrDisabilityEquipment   UsrDisabilityEquipment?  @relation(fields: [usrDisabilityEquipmentId], references: [id])
+  UsrIcd                   UsrIcd                   @relation(fields: [usrIcdId], references: [id])
+  UsrServiceStation        UsrServiceStation?       @relation(fields: [usrServiceStationId], references: [id])
+  UsrUser                  UsrUser                  @relation(fields: [usrUserId], references: [id], onDelete: Cascade)
+  UsrDisabilityAttendant   UsrDisabilityAttendant[]
+
+  @@schema("user")
+}
+
+model UsrDisabilityAttendant {
+  id                Int              @id @default(autoincrement())
+  name              String
+  document          String?
+  comment           String?
+  isActive          Boolean          @default(true)
+  blameUser         String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime
+  usrDisabilityId   Int?
+  externalId        Int?             @unique
+  usrDocumentTypeId Int?
+  usrUserId         Int?
+  UsrDisability     UsrDisability?   @relation(fields: [usrDisabilityId], references: [id])
+  UsrDocumentType   UsrDocumentType? @relation(fields: [usrDocumentTypeId], references: [id])
+  UsrUser           UsrUser?         @relation(fields: [usrUserId], references: [id])
+
+  @@schema("user")
+}
+
+model UsrDisabilityEquipment {
+  id            Int             @id @default(autoincrement())
+  description   String
+  isActive      Boolean         @default(true)
+  blameUser     String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  UsrDisability UsrDisability[]
+
+  @@schema("user")
+}
+
+model UsrDocument {
+  id                                             Int             @id @default(autoincrement())
+  usrUserId                                      Int
+  value                                          String
+  expirationDate                                 DateTime?       @db.Date
+  complement                                     String?
+  isActive                                       Boolean         @default(true)
+  blameUser                                      String
+  createdAt                                      DateTime        @default(now())
+  updatedAt                                      DateTime
+  usrDocumentTypeId                              Int
+  expeditionDate                                 DateTime?       @db.Date
+  presignUrls                                    String[]
+  filenames                                      String[]
+  externalId                                     Int?            @unique
+  valueUnique                                    String?
+  UsrDocumentType                                UsrDocumentType @relation(fields: [usrDocumentTypeId], references: [id])
+  UsrUser_UsrDocument_usrUserIdToUsrUser         UsrUser         @relation("UsrDocument_usrUserIdToUsrUser", fields: [usrUserId], references: [id], onDelete: Cascade)
+  UsrUser_UsrUser_usrMainDocumentIdToUsrDocument UsrUser?        @relation("UsrUser_usrMainDocumentIdToUsrDocument")
+
+  @@unique([usrUserId, usrDocumentTypeId])
+  @@unique([valueUnique, usrDocumentTypeId])
+  @@index([usrUserId, usrDocumentTypeId], map: "idxdocumentuser")
+  @@schema("user")
+}
+
+model UsrDocumentType {
+  id                             Int                       @id @default(autoincrement())
+  description                    String                    @unique
+  role                           DocumentRole
+  isUnique                       Boolean                   @default(false)
+  isMain                         Boolean                   @default(false)
+  formatMask                     String?
+  regexValidation                String?
+  isExpirationRequired           Boolean                   @default(false)
+  isComplementRequired           Boolean                   @default(false)
+  complementCaption              String?
+  isActive                       Boolean                   @default(true)
+  blameUser                      String
+  createdAt                      DateTime                  @default(now())
+  updatedAt                      DateTime
+  UsrRequiredByOrganizationTypes OrganizationType[]
+  isExpeditionRequired           Boolean                   @default(false)
+  isPhotoRequired                Boolean                   @default(false)
+  priority                       Int?
+  externalId                     Int?                      @unique
+  UsrDisabilityAttendant         UsrDisabilityAttendant[]
+  UsrDocument                    UsrDocument[]
+  UsrOrganizationDocument        UsrOrganizationDocument[]
+  UsrType                        UsrType[]                 @relation("UsrDocumentType_UsrType_IsRequired")
+
+  @@unique([role, priority])
+  @@schema("user")
+}
+
+model UsrElderly {
+  id                  Int                @id @default(autoincrement())
+  usrUserId           Int
+  registration        DateTime?          @db.Date
+  usrServiceStationId Int?
+  isActive            Boolean            @default(true)
+  blameUser           String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime
+  externalId          Int?               @unique
+  UsrServiceStation   UsrServiceStation? @relation(fields: [usrServiceStationId], references: [id])
+  UsrUser             UsrUser            @relation(fields: [usrUserId], references: [id], onDelete: Cascade)
+
+  @@schema("user")
+}
+
+model UsrEmployee {
+  id                Int             @id(map: "UsrEmployee_pkey2") @default(autoincrement())
+  usrUserId         Int
+  usrOrganizationId Int
+  admissionDate     DateTime?       @db.Date
+  resignDate        DateTime?       @db.Date
+  position          String?
+  isActive          Boolean         @default(true)
+  blameUser         String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime
+  comment           String?
+  externalId        Int?            @unique(map: "UsrEmployee2_externalId_key")
+  qtdDayUser        Int?
+  UsrOrganization   UsrOrganization @relation(fields: [usrOrganizationId], references: [id], map: "UsrEmployee2_usrOrganizationId_fkey")
+  UsrUser           UsrUser         @relation(fields: [usrUserId], references: [id], onDelete: Cascade, map: "UsrEmployee2_usrUserId_fkey")
+
+  @@index([id, usrUserId, usrOrganizationId], map: "usremployee2_id_idx")
+  @@schema("user")
+}
+
+model UsrEmployee_old {
+  id                Int             @id(map: "UsrEmployee_pkey") @default(autoincrement())
+  usrUserId         Int
+  usrOrganizationId Int
+  admissionDate     DateTime?       @db.Date
+  resignDate        DateTime?       @db.Date
+  position          String?
+  isActive          Boolean         @default(true)
+  blameUser         String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime
+  comment           String?
+  externalId        Int?            @unique(map: "UsrEmployee_externalId_key")
+  qtdDayUser        Int?
+  UsrOrganization   UsrOrganization @relation(fields: [usrOrganizationId], references: [id], map: "UsrEmployee_usrOrganizationId_fkey")
+  UsrUser           UsrUser         @relation(fields: [usrUserId], references: [id], onDelete: Cascade, map: "UsrEmployee_usrUserId_fkey")
+
+  @@schema("user")
+}
+
+model UsrIcd {
+  id             Int             @id @default(autoincrement())
+  name           String
+  description    String
+  isActive       Boolean         @default(true)
+  blameUser      String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime
+  allowAttendant Boolean         @default(false)
+  code           String
+  comment        String?
+  isApproved     Boolean         @default(false)
+  validity       Int?
+  UsrDisability  UsrDisability[]
+
+  @@index([code], map: "UsrIcd_code")
+  @@schema("user")
+}
+
+model UsrMigrationLog {
+  id           Int           @id @default(autoincrement())
+  type         MigrationType
+  externalId   Int
+  externalData String
+  message      String
+  createdAt    DateTime      @default(now())
+
+  @@schema("user")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model UsrOperator {
+  id                         Int       @id @default(autoincrement())
+  usrUserId                  Int
+  toTransportOperatorId      Int?
+  toTransportOperatorGroupId Int?
+  toOperatorGroupId          Int?
+  admissionDate              DateTime? @db.Date
+  resignDate                 DateTime? @db.Date
+  hrid                       Int?
+  isMaster                   Boolean   @default(false)
+  isActive                   Boolean   @default(true)
+  blameUser                  String
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime
+  comment                    String?
+  externalId                 Int?      @unique
+  operatorPin                String?
+  UsrUser                    UsrUser   @relation(fields: [usrUserId], references: [id], onDelete: Cascade)
+
+  @@schema("user")
+}
+
+model UsrOrganization {
+  id                                                                                             Int                       @id @default(autoincrement())
+  name                                                                                           String
+  shortName                                                                                      String
+  mailAddress                                                                                    String?
+  types                                                                                          OrganizationType[]
+  usrMainOrganizationDocumentId                                                                  Int?                      @unique
+  usrMainOrganizationPhoneId                                                                     Int?                      @unique
+  usrMainOrganizationAddressId                                                                   Int?                      @unique
+  isActive                                                                                       Boolean                   @default(true)
+  blameUser                                                                                      String
+  createdAt                                                                                      DateTime                  @default(now())
+  updatedAt                                                                                      DateTime
+  clientId                                                                                       String?
+  sysGroupId                                                                                     Int?
+  toTransportOperatorId                                                                          Int?
+  externalId                                                                                     Int?                      @unique
+  paymentSecret                                                                                  String?
+  UsrEmployee                                                                                    UsrEmployee[]
+  UsrEmployee_old                                                                                UsrEmployee_old[]
+  UsrOrganizationAddress_UsrOrganization_usrMainOrganizationAddressIdToUsrOrganizationAddress    UsrOrganizationAddress?   @relation("UsrOrganization_usrMainOrganizationAddressIdToUsrOrganizationAddress", fields: [usrMainOrganizationAddressId], references: [id])
+  UsrOrganizationDocument_UsrOrganization_usrMainOrganizationDocumentIdToUsrOrganizationDocument UsrOrganizationDocument?  @relation("UsrOrganization_usrMainOrganizationDocumentIdToUsrOrganizationDocument", fields: [usrMainOrganizationDocumentId], references: [id])
+  UsrOrganizationPhone_UsrOrganization_usrMainOrganizationPhoneIdToUsrOrganizationPhone          UsrOrganizationPhone?     @relation("UsrOrganization_usrMainOrganizationPhoneIdToUsrOrganizationPhone", fields: [usrMainOrganizationPhoneId], references: [id])
+  UsrOrganizationAddress_UsrOrganizationAddress_usrOrganizationIdToUsrOrganization               UsrOrganizationAddress[]  @relation("UsrOrganizationAddress_usrOrganizationIdToUsrOrganization")
+  UsrOrganizationDocument_UsrOrganizationDocument_usrOrganizationIdToUsrOrganization             UsrOrganizationDocument[] @relation("UsrOrganizationDocument_usrOrganizationIdToUsrOrganization")
+  UsrOrganizationGroup                                                                           UsrOrganizationGroup[]
+  UsrOrganizationPhone_UsrOrganizationPhone_usrOrganizationIdToUsrOrganization                   UsrOrganizationPhone[]    @relation("UsrOrganizationPhone_usrOrganizationIdToUsrOrganization")
+  UsrStudent                                                                                     UsrStudent[]
+
+  @@schema("user")
+}
+
+model UsrOrganizationAddress {
+  id                                                                                   Int                   @id @default(autoincrement())
+  type                                                                                 AddressType
+  street                                                                               String
+  number                                                                               String
+  complement                                                                           String?
+  zipCode                                                                              String
+  location                                                                             Unsupported("point")?
+  usrOrganizationId                                                                    Int
+  isActive                                                                             Boolean               @default(true)
+  blameUser                                                                            String
+  createdAt                                                                            DateTime              @default(now())
+  updatedAt                                                                            DateTime
+  isMain                                                                               Boolean?
+  city                                                                                 String?
+  district                                                                             String?
+  country                                                                              String?
+  state                                                                                String?
+  UsrOrganization_UsrOrganization_usrMainOrganizationAddressIdToUsrOrganizationAddress UsrOrganization?      @relation("UsrOrganization_usrMainOrganizationAddressIdToUsrOrganizationAddress")
+  UsrOrganization_UsrOrganizationAddress_usrOrganizationIdToUsrOrganization            UsrOrganization       @relation("UsrOrganizationAddress_usrOrganizationIdToUsrOrganization", fields: [usrOrganizationId], references: [id], onDelete: Cascade)
+
+  @@schema("user")
+}
+
+model UsrOrganizationDocument {
+  id                                                                                     Int              @id @default(autoincrement())
+  usrOrganizationId                                                                      Int
+  value                                                                                  String
+  expirationDate                                                                         DateTime?        @db.Date
+  complement                                                                             String?
+  isActive                                                                               Boolean          @default(true)
+  blameUser                                                                              String
+  createdAt                                                                              DateTime         @default(now())
+  updatedAt                                                                              DateTime
+  expeditionDate                                                                         DateTime?        @db.Date
+  usrDocumentTypeId                                                                      Int
+  filenames                                                                              String[]
+  presignUrls                                                                            String[]
+  UsrOrganization_UsrOrganization_usrMainOrganizationDocumentIdToUsrOrganizationDocument UsrOrganization? @relation("UsrOrganization_usrMainOrganizationDocumentIdToUsrOrganizationDocument")
+  UsrDocumentType                                                                        UsrDocumentType  @relation(fields: [usrDocumentTypeId], references: [id])
+  UsrOrganization_UsrOrganizationDocument_usrOrganizationIdToUsrOrganization             UsrOrganization  @relation("UsrOrganizationDocument_usrOrganizationIdToUsrOrganization", fields: [usrOrganizationId], references: [id], onDelete: Cascade)
+
+  @@unique([usrOrganizationId, usrDocumentTypeId])
+  @@schema("user")
+}
+
+model UsrOrganizationGroup {
+  id                Int             @id @default(autoincrement())
+  description       String
+  longDescription   String?
+  usrOrganizationId Int
+  isActive          Boolean         @default(true)
+  blameUser         String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime
+  UsrOrganization   UsrOrganization @relation(fields: [usrOrganizationId], references: [id])
+
+  @@schema("user")
+}
+
+model UsrOrganizationPhone {
+  id                                                                               Int              @id @default(autoincrement())
+  countryCode                                                                      Int
+  number                                                                           String
+  contactInfo                                                                      String?
+  usrOrganizationId                                                                Int
+  isActive                                                                         Boolean          @default(true)
+  blameUser                                                                        String
+  createdAt                                                                        DateTime         @default(now())
+  updatedAt                                                                        DateTime
+  isMain                                                                           Boolean?
+  channels                                                                         PhoneChannel[]
+  type                                                                             PhoneType?
+  UsrOrganization_UsrOrganization_usrMainOrganizationPhoneIdToUsrOrganizationPhone UsrOrganization? @relation("UsrOrganization_usrMainOrganizationPhoneIdToUsrOrganizationPhone")
+  UsrOrganization_UsrOrganizationPhone_usrOrganizationIdToUsrOrganization          UsrOrganization  @relation("UsrOrganizationPhone_usrOrganizationIdToUsrOrganization", fields: [usrOrganizationId], references: [id], onDelete: Cascade)
+
+  @@schema("user")
+}
+
+model UsrPhone {
+  id                                       Int            @id @default(autoincrement())
+  type                                     PhoneType
+  countryCode                              Int
+  number                                   String
+  usrUserId                                Int
+  isActive                                 Boolean        @default(true)
+  blameUser                                String
+  createdAt                                DateTime       @default(now())
+  updatedAt                                DateTime
+  channels                                 PhoneChannel[]
+  contact                                  String?
+  isMain                                   Boolean?
+  externalId                               Int?           @unique
+  UsrUser_UsrPhone_usrUserIdToUsrUser      UsrUser        @relation("UsrPhone_usrUserIdToUsrUser", fields: [usrUserId], references: [id], onDelete: Cascade)
+  UsrUser_UsrUser_usrMainPhoneIdToUsrPhone UsrUser?       @relation("UsrUser_usrMainPhoneIdToUsrPhone")
+
+  @@index([usrUserId, number], map: "idxtemp_phone")
+  @@schema("user")
+}
+
+model UsrPhoto {
+  id                                       Int       @id @default(autoincrement())
+  type                                     PhotoType
+  isActive                                 Boolean   @default(true)
+  blameUser                                String
+  createdAt                                DateTime  @default(now())
+  updatedAt                                DateTime
+  filename                                 String
+  usrUserId                                Int
+  presignUrl                               String?
+  isMain                                   Boolean?
+  externalId                               Int?      @unique
+  UsrUser_UsrPhoto_usrUserIdToUsrUser      UsrUser   @relation("UsrPhoto_usrUserIdToUsrUser", fields: [usrUserId], references: [id], onDelete: Cascade)
+  UsrUser_UsrUser_usrMainPhotoIdToUsrPhoto UsrUser?  @relation("UsrUser_usrMainPhotoIdToUsrPhoto")
+
+  @@unique([usrUserId, filename])
+  @@schema("user")
+}
+
+model UsrServiceStation {
+  id            Int                   @id @default(autoincrement())
+  name          String
+  shortName     String
+  street        String
+  number        String
+  complement    String?
+  zipCode       String
+  location      Unsupported("point")?
+  isActive      Boolean               @default(true)
+  blameUser     String
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime
+  city          String?
+  district      String?
+  state         String?
+  externalId    Int?                  @unique
+  UsrDisability UsrDisability[]
+  UsrElderly    UsrElderly[]
+
+  @@schema("user")
+}
+
+model UsrStatus {
+  code        Int       @id
+  description String
+  isAllowed   Boolean
+  blameUser   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  UsrUser     UsrUser[]
+
+  @@schema("user")
+}
+
+model UsrStudent {
+  id                 Int               @id @default(autoincrement())
+  usrUserId          Int
+  usrOrganizationId  Int
+  admissionDate      DateTime?         @db.Date
+  resignDate         DateTime?         @db.Date
+  registryDocument   String?
+  grade              String?
+  classroom          String?
+  isActive           Boolean?          @default(true)
+  blameUser          String
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime
+  usrStudentLevelId  Int?
+  usrStudentPeriodId Int?
+  usrStudentTypeId   Int?
+  externalId         Int?              @unique
+  medQuotaId         Int?
+  UsrOrganization    UsrOrganization   @relation(fields: [usrOrganizationId], references: [id])
+  UsrStudentLevel    UsrStudentLevel?  @relation(fields: [usrStudentLevelId], references: [id])
+  UsrStudentPeriod   UsrStudentPeriod? @relation(fields: [usrStudentPeriodId], references: [id])
+  UsrStudentType     UsrStudentType?   @relation(fields: [usrStudentTypeId], references: [id])
+  UsrUser            UsrUser           @relation(fields: [usrUserId], references: [id], onDelete: Cascade)
+
+  @@schema("user")
+}
+
+model UsrStudentLevel {
+  id          Int          @id @default(autoincrement())
+  description String
+  isActive    Boolean      @default(true)
+  blameUser   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime
+  UsrStudent  UsrStudent[]
+
+  @@schema("user")
+}
+
+model UsrStudentPeriod {
+  id          Int          @id @default(autoincrement())
+  description String
+  isActive    Boolean      @default(true)
+  blameUser   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime
+  UsrStudent  UsrStudent[]
+
+  @@schema("user")
+}
+
+model UsrStudentType {
+  id          Int          @id @default(autoincrement())
+  description String
+  isActive    Boolean      @default(true)
+  blameUser   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime
+  UsrStudent  UsrStudent[]
+
+  @@schema("user")
+}
+
+model UsrType {
+  id                           Int               @id @default(autoincrement())
+  description                  String
+  type                         UserBaseType
+  comment                      String?
+  isActive                     Boolean           @default(true)
+  blameUser                    String
+  createdAt                    DateTime          @default(now())
+  updatedAt                    DateTime
+  maximumAge                   Int?
+  minimalAge                   Int?
+  externalId                   Int?              @unique
+  checkStatusOnMediaCreate     Boolean           @default(false)
+  checkStatusOnUserCreate      Boolean           @default(false)
+  showOnSimplifiedUserRegister Boolean           @default(false)
+  UsrDocumentType              UsrDocumentType[] @relation("UsrDocumentType_UsrType_IsRequired")
+  UsrUser                      UsrUser[]
+
+  @@schema("user")
+}
+
+model UsrUser {
+  id                                                 Int                      @id @default(autoincrement())
+  name                                               String
+  socialName                                         String?
+  birthdate                                          DateTime                 @db.Date
+  gender                                             user_Gender
+  motherName                                         String?
+  fatherName                                         String?
+  mailAddress                                        String?
+  usrMainDocumentId                                  Int?                     @unique
+  usrMainPhoneId                                     Int?                     @unique
+  usrMainAddressId                                   Int?                     @unique
+  isActive                                           Boolean                  @default(true)
+  blameUser                                          String
+  createdAt                                          DateTime                 @default(now())
+  updatedAt                                          DateTime
+  hash                                               String?
+  usrMainPhotoId                                     Int?                     @unique
+  aggregatedData                                     String?
+  isOperator                                         Boolean                  @default(false)
+  externalId                                         Int?                     @unique
+  legacyId                                           Int?
+  filiation1                                         String?
+  filiation2                                         String?
+  isLocked                                           Boolean                  @default(false)
+  statusCheckDate                                    DateTime?
+  usrStatusCode                                      Int?
+  usrMainCommentId                                   Int?                     @unique
+  paymentSecret                                      String?
+  nationality                                        String?
+  maritalStatus                                      MaritalStatus?
+  familyIncome                                       Int?
+  personalIncome                                     Int?
+  UsrAddress_UsrAddress_usrUserIdToUsrUser           UsrAddress[]             @relation("UsrAddress_usrUserIdToUsrUser")
+  UsrComment_UsrComment_usrUserIdToUsrUser           UsrComment[]             @relation("UsrComment_usrUserIdToUsrUser")
+  UsrDisability                                      UsrDisability[]
+  UsrDisabilityAttendant                             UsrDisabilityAttendant[]
+  UsrDocument_UsrDocument_usrUserIdToUsrUser         UsrDocument[]            @relation("UsrDocument_usrUserIdToUsrUser")
+  UsrElderly                                         UsrElderly[]
+  UsrEmployee                                        UsrEmployee[]
+  UsrEmployee_old                                    UsrEmployee_old[]
+  UsrOperator                                        UsrOperator[]
+  UsrPhone_UsrPhone_usrUserIdToUsrUser               UsrPhone[]               @relation("UsrPhone_usrUserIdToUsrUser")
+  UsrPhoto_UsrPhoto_usrUserIdToUsrUser               UsrPhoto[]               @relation("UsrPhoto_usrUserIdToUsrUser")
+  UsrStudent                                         UsrStudent[]
+  UsrAddress_UsrUser_usrMainAddressIdToUsrAddress    UsrAddress?              @relation("UsrUser_usrMainAddressIdToUsrAddress", fields: [usrMainAddressId], references: [id])
+  UsrComment_UsrUser_usrMainCommentIdToUsrComment    UsrComment?              @relation("UsrUser_usrMainCommentIdToUsrComment", fields: [usrMainCommentId], references: [id])
+  UsrDocument_UsrUser_usrMainDocumentIdToUsrDocument UsrDocument?             @relation("UsrUser_usrMainDocumentIdToUsrDocument", fields: [usrMainDocumentId], references: [id])
+  UsrPhone_UsrUser_usrMainPhoneIdToUsrPhone          UsrPhone?                @relation("UsrUser_usrMainPhoneIdToUsrPhone", fields: [usrMainPhoneId], references: [id])
+  UsrPhoto_UsrUser_usrMainPhotoIdToUsrPhoto          UsrPhoto?                @relation("UsrUser_usrMainPhotoIdToUsrPhoto", fields: [usrMainPhotoId], references: [id])
+  UsrStatus                                          UsrStatus?               @relation(fields: [usrStatusCode], references: [code])
+  UsrUserHistory                                     UsrUserHistory[]
+  UsrUserTag                                         UsrUserTag[]
+  UsrType                                            UsrType[]
+
+  @@index([aggregatedData(ops: raw("gist_trgm_ops"))], type: Gist)
+  @@index([usrMainAddressId], map: "idx_usrMainAddressId")
+  @@index([usrMainCommentId], map: "idx_usrMainCommentId")
+  @@index([usrMainDocumentId], map: "idx_usrMainDocumentId")
+  @@index([usrMainPhoneId], map: "idx_usrMainPhoneId")
+  @@index([usrMainPhotoId], map: "idx_usrMainPhotoId")
+  @@schema("user")
+}
+
+model UsrUserHistory {
+  id        Int      @id @default(autoincrement())
+  usrUserId Int
+  tableName String
+  fieldName String
+  oldValue  String
+  newValue  String
+  blameUser String
+  updatedAt DateTime @default(now())
+  operation String?
+  UsrUser   UsrUser  @relation(fields: [usrUserId], references: [id])
+
+  @@index([usrUserId], map: "UsrUserHistory_usrUserId_IDX")
+  @@schema("user")
+}
+
+model UsrUserTag {
+  id        Int      @id @default(autoincrement())
+  clientId  String
+  usrUserId Int
+  tag       String
+  blameUser String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  UsrUser   UsrUser  @relation(fields: [usrUserId], references: [id])
+
+  @@unique([clientId, usrUserId, tag])
+  @@schema("user")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_primeiravia_tmob_oficial_v2 {
+  datapagamento         DateTime? @db.Date
+  entrega               String?   @db.VarChar(255)
+  empresa               String?   @db.VarChar(255)
+  func_name             String?
+  cpf                   String?
+  formatedLogical       String?
+  datacriacao_user      DateTime?
+  datacriacao_documento DateTime?
+  taxa                  Decimal?  @db.Decimal
+  commerce              Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_card_by_document {
+  usrUserId       Int?
+  value           String?
+  formatedLogical String?
+  name            String?
+  csn             BigInt?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_temp_primeira_via {
+  document    String?   @db.VarChar(30)
+  cpf         String?   @db.VarChar(30)
+  company     String?   @db.VarChar(255)
+  name        String?   @db.VarChar(120)
+  datapedido  DateTime? @db.Timestamptz(6)
+  value       Int?
+  cardNumber  String?   @db.VarChar(100)
+  paymentDate DateTime? @db.Timestamptz(6)
+  commerce    Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_segunda_via_vt_old {
+  localentrega         String?   @db.VarChar(50)
+  tipo_usuario         String?
+  cartao               String?
+  tipo                 String?
+  data_entrega         DateTime? @db.Date
+  lote                 String?
+  pedido               String?
+  nosso_numero         String?
+  contato_empresa      String?   @db.VarChar(50)
+  usuario_id           String?   @db.VarChar(30)
+  nome_usuario         String?   @db.VarChar(120)
+  cpf_usuario          String?   @db.VarChar(35)
+  data_pagamento       DateTime? @db.Date
+  empresa              String?
+  empresa_endereco     String?
+  empresa_num_endereco String?
+  empresa_complemento  String?
+  empresa_cep          String?
+  empresa_cidade       String?
+  empresa_bairro       String?
+  empresa_telefone     String?
+
+  @@ignore
+  @@schema("public")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwDomainToIssuer {
+  code Int?
+  name String?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwDomainToSystem {
+  toSysCode   Int?
+  description String?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwDomainUsrOperator {
+  usrOperatorId Int?
+  usrUserId     Int?
+  name          String?
+  socialName    String?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwVoucherByTerminal {
+  id                    BigInt?
+  total                 BigInt?
+  toTerminalCode        Int?
+  toTransportOperatorId Int?
+  voucherType           ComVoucherType?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwVoucherByMonth {
+  id    BigInt?
+  total BigInt?
+  month DateTime? @db.Date
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwVoucherByDay {
+  id    BigInt?
+  total BigInt?
+  day   DateTime? @db.Date
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwDomainProduct {
+  type         String?
+  subType      Int?
+  description  String?
+  code         Int?
+  toIssuerCode Int?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwRevenueByPayment {
+  id            BigInt?
+  paymentMethod PaymentMethod?
+  comMerchant   String?
+  comMerchantId Int?
+  date          DateTime?      @db.Date
+  amount        BigInt?
+  received      BigInt?
+  count         BigInt?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwRevenueByMediaXOperation {
+  id            BigInt?
+  mediaType     MediaType?
+  operationType OperationType?
+  comMerchant   String?
+  comMerchantId Int?
+  date          DateTime?      @db.Date
+  amount        BigInt?
+  received      BigInt?
+  count         BigInt?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwRevenueByProduct {
+  id               BigInt?
+  type             MediaType?
+  subType          Int?
+  product          String?
+  collectorGroupId Int?
+  collectorGroup   String?
+  comMerchant      String?
+  comMerchantId    Int?
+  date             DateTime?  @db.Date
+  amount           BigInt?
+  received         BigInt?
+  count            BigInt?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwRevenueByIssuer {
+  id            BigInt?
+  comMerchantId Int?
+  comMerchant   String?
+  toIssuerCode  Int?
+  toIssuer      String?
+  date          DateTime? @db.Date
+  amount        BigInt?
+  received      BigInt?
+  count         BigInt?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwDomainMediaProduct {
+  id                      BigInt?
+  medMediaId              Int?
+  medMediaCsn             BigInt?
+  medMediaProductId       Int?
+  medTransitProductId     Int?
+  medTransitProductDesc   String?
+  medTransitProductCode   Int?
+  toIssuerCode            Int?
+  quotaLimit              Decimal[] @db.Decimal
+  medMediaFormatedLogical String?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwDomainUsrOrganization {
+  usrOrganizationId     Int?
+  name                  String?
+  shortName             String?
+  mailAddress           String?
+  paymentSecret         String?
+  mainDocument          String?
+  mainPhoneCountryCode  Int?
+  mainPhoneNumber       String?
+  mainAddressStreet     String?
+  mainAddressNumber     String?
+  mainAddressComplement String?
+  mainAddressZipCode    String?
+  mainAddressCity       String?
+  mainAddressDistrict   String?
+  mainAddressState      String?
+  mainAddressCountry    String?
+  isActive              Boolean?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwLastOrders {
+  id                 Int?
+  medMediaProductId  Int?
+  value              Int?
+  rechargeDate       DateTime?
+  releaseDate        DateTime?
+  isActive           Boolean?
+  isProcessed        Boolean?
+  isPaid             Boolean?
+  isCompleted        Boolean?
+  isWaitingPayment   Boolean?
+  paymentObservation String?
+  paymentType        PaymentType?
+  paymentDate        DateTime?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwDomainMedia {
+  medMediaId              Int?
+  medMediaCsn             BigInt?
+  medMediaFormatedLogical String?
+  medMediaIsProcessed     Boolean?
+  medMediaUsrUserId       Int?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwTransaction {
+  comTransactionId      Int?
+  comTransactionGuid    String?
+  comMerchantId         Int?
+  comMerchant           String?
+  date                  DateTime?      @db.Date
+  datetime              DateTime?
+  toTerminalCode        Int?
+  toTerminalGroupId     Int?
+  toTransportOperatorId Int?
+  toTerminal            String?
+  operationType         OperationType?
+  type                  MediaType?
+  subType               Int?
+  comissionType         CommisionType?
+  comissionTypeValue    Int?
+  subTypeDesc           String?
+  mediaId               String?
+  externalMediaId       String?
+  media                 String?
+  comPaymentModeId      Int?
+  comPaymentMode        String?
+  value                 Int?
+  receivedValue         Int?
+  comission             Int?
+  isProcessed           Boolean?
+  isPaymentComplete     Boolean?
+  isActive              Boolean?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwDomainMedQuota {
+  id       Int?
+  isLegacy Boolean?
+
+  @@ignore
+  @@schema("user")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwDomainMedMediaProduct {
+  medMediaId           Int?
+  usrUserId            Int?
+  isMediaActive        Boolean?
+  medMediaProductId    Int?
+  medTransitProductId  Int?
+  endValidity          DateTime?
+  isMediaProductActive Boolean?
+  usn                  Int?
+
+  @@ignore
+  @@schema("user")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwUserInfoWithMedMedia {
+  usrUserId                  Int?
+  usrDocumentTypeId          Int?
+  usrDocumentId              Int?
+  birthdate                  DateTime? @db.Date
+  usrDocumentTypeDescription String?
+  usrDocumentValue           String?
+  formatedLogical            String?
+  mediaIsActive              Boolean?
+  mediaIsHotlisted           Boolean?
+  mediaIsProcessed           Boolean?
+  mediaId                    Int?
+
+  @@ignore
+  @@schema("user")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_sal_order_boleto_status {
+  salOrderId      Int?
+  externalId      Int?
+  date            DateTime?           @db.Timestamptz(6)
+  name            String?             @db.VarChar(255)
+  totalValue      Int?
+  status          OrderStatus?
+  paymentDate     DateTime?
+  paymentType     PaymentType?
+  value           Int?
+  paymentStatus   PaymentOrderStatus?
+  id              Int?
+  linha_digitavel String?
+  nosso_numero    String?
+  status_boleto   String?
+  isPaid          Boolean?
+  isReleased      Boolean?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view VwDomainToTerminal {
+  toTerminalCode          Int?
+  toTransportOperatorId   Int?
+  toTerminalGroupId       Int?
+  description             String?
+  toTransportOperatorDesc String?
+  stationId               Int?
+  station                 String?
+  lineId                  Int?
+  line                    String?
+  companyId               Int?
+  company                 String?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwMerchantSummary {
+  date                             DateTime? @db.Date
+  toIssuerCode                     Int?
+  toIssuerName                     String?
+  comMerchantId                    Int?
+  receivedQrCodeSale               BigInt?
+  transactionQrCodeSale            BigInt?
+  receivedQrCodeSaleCancel         BigInt?
+  transactionQrCodeSaleCancel      BigInt?
+  transactionMediaSaleCancel       BigInt?
+  receivedMediaSaleCancel          BigInt?
+  transactionMediaSale             BigInt?
+  receivedMediaSale                BigInt?
+  transactionMediaRechargePurchase BigInt?
+  receivedMediaRechargePurchase    BigInt?
+  transactionMediaTopup            BigInt?
+  receivedMediaTopup               BigInt?
+  credit                           BigInt?
+  debit                            BigInt?
+  cash                             BigInt?
+  voucher                          BigInt?
+  countQrCodeSale                  BigInt?
+  countQrCodeSaleCancel            BigInt?
+  countMediaSaleCancel             BigInt?
+  countMediaSale                   BigInt?
+  countMediaRechargePurchase       BigInt?
+  countMediaTopup                  BigInt?
+  errorCount                       BigInt?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view ComVwRevenueByMediaType {
+  id            BigInt?
+  type          MediaType?
+  comMerchant   String?
+  comMerchantId Int?
+  date          DateTime?  @db.Date
+  amount        BigInt?
+  received      BigInt?
+  count         BigInt?
+
+  @@ignore
+  @@schema("commerce")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_primeira_via_vt {
+  localentrega         String?   @db.VarChar(255)
+  tipo_usuario         String?
+  cartao               String?
+  tipo                 String?
+  data_entrega         DateTime? @db.Date
+  lote                 Int?
+  pedido               String?
+  nosso_numero         String?
+  contato_empresa      String?   @db.VarChar(50)
+  usuario_id           DateTime?
+  nome_usuario         String?
+  cpf_usuario          String?
+  data_pagamento       DateTime? @db.Date
+  empresa              String?
+  empresa_endereco     String?
+  empresa_num_endereco String?
+  empresa_complemento  String?
+  empresa_cep          String?
+  empresa_cidade       String?
+  empresa_bairro       String?
+  empresa_telefone     String?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view CardsIssue01 {
+  datapagamento         DateTime? @db.Date
+  entrega               String?   @db.VarChar(255)
+  empresa               String?   @db.VarChar(255)
+  organizationid        Int?
+  func_name             String?
+  cpf                   String?
+  formatedLogical       String?
+  datacriacao_user      DateTime?
+  datacriacao_documento DateTime?
+  taxa                  Decimal?  @db.Decimal
+  commerce              Int?
+  DetailId              Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_primeiravia_tmob_oficial {
+  datapagamento         DateTime? @db.Date
+  entrega               String?   @db.VarChar(255)
+  documento_empresa     String?   @db.VarChar(30)
+  empresa               String?   @db.VarChar(255)
+  func_name             String?
+  cpf                   String?
+  formatedLogical       String?
+  datacriacao_user      DateTime?
+  datacriacao_documento DateTime?
+  taxa                  Decimal?  @db.Decimal
+  commerce              Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_primeiravia_tmob {
+  datapagamento         DateTime? @db.Date
+  entrega               String?   @db.VarChar(255)
+  empresa               String?   @db.VarChar(255)
+  func_name             String?
+  cpf                   String?
+  formatedLogical       String?
+  datacriacao_user      DateTime?
+  datacriacao_documento DateTime?
+  taxa                  Decimal?  @db.Decimal
+  commerce              Int?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view CardsIssue01v2 {
+  numerolote            Int?
+  datapagamento         DateTime? @db.Date
+  numeropedido          Int?
+  entrega               String?   @db.VarChar(255)
+  id_empresa            Int?
+  documentompresa       String?   @db.VarChar(30)
+  addrStreet            String?   @db.VarChar(255)
+  addrNbr               String?   @db.VarChar(20)
+  addrComplement        String?   @db.VarChar(255)
+  addrDistrict          String?   @db.VarChar(255)
+  addrZipCode           String?   @db.VarChar(30)
+  empresa               String?   @db.VarChar(255)
+  id_funcionario        Int?
+  func_name             String?
+  data_nascimento       String?
+  cpf                   String?
+  formatedLogical       String?
+  datacriacao_user      DateTime?
+  datacriacao_documento DateTime?
+  taxa                  Decimal?  @db.Decimal
+  commerce              Int?
+  contatoempresa        String?   @db.VarChar(50)
+  contatotclient        String?   @db.VarChar(50)
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_segunda_via_vt {
+  localentrega         String?   @db.VarChar(50)
+  tipo_usuario         String?
+  cartao               String?
+  tipo                 String?
+  data_entrega         DateTime? @db.Timestamptz(6)
+  lote                 Int?
+  data_lote            DateTime? @db.Timestamptz(6)
+  pedido               String?
+  nosso_numero         String?
+  contato_empresa      String?   @db.VarChar(50)
+  usuario_id           String?   @db.VarChar(30)
+  nome_usuario         String?   @db.VarChar(120)
+  data_nascimento      DateTime? @db.Date
+  cpf_usuario          String?   @db.VarChar(35)
+  data_pagamento       DateTime? @db.Date
+  empresa_documento    String?   @db.VarChar(50)
+  empresa_id           Int?
+  empresa              String?
+  empresa_endereco     String?
+  empresa_num_endereco String?
+  empresa_complemento  String?
+  empresa_cep          String?
+  empresa_cidade       String?
+  empresa_bairro       String?
+  empresa_telefone     String?
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view CardsIssue01v3 {
+  numerolote            Int?
+  datapagamento         DateTime? @db.Date
+  numeropedido          Int?
+  entrega               String?   @db.VarChar(255)
+  id_empresa            Int?
+  documentompresa       String?   @db.VarChar(30)
+  addrStreet            String?   @db.VarChar(255)
+  addrNbr               String?   @db.VarChar(20)
+  addrComplement        String?   @db.VarChar(255)
+  addrDistrict          String?   @db.VarChar(255)
+  addrZipCode           String?   @db.VarChar(30)
+  empresa               String?   @db.VarChar(255)
+  id_funcionario        Int?
+  func_name             String?
+  data_nascimento       String?
+  cpf                   String?
+  formatedLogical       String?
+  datacriacao_user      DateTime?
+  datacriacao_documento DateTime?
+  taxa                  Decimal?  @db.Decimal
+  commerce              Int?
+  contatoempresa        String?   @db.VarChar(50)
+  contatotclient        String?   @db.VarChar(50)
+
+  @@ignore
+  @@schema("salesportal")
+}
+
+enum ComTaxType {
+  secondCopy
+  delivery
+
+  @@schema("commerce")
+}
+
+enum ComVoucherType {
+  auto
+  manual
+
+  @@schema("commerce")
+}
+
+enum CommerceChannelType {
+  sptrans
+
+  @@schema("commerce")
+}
+
+enum CommisionType {
+  percentage
+  value
+
+  @@schema("commerce")
+}
+
+enum FlowType {
+  credit
+  debit
+
+  @@schema("commerce")
+}
+
+enum commerce_Gender {
+  male
+  female
+  other
+
+  @@map("Gender")
+  @@schema("commerce")
+}
+
+enum MediaType {
+  qrcode
+  media
+  abt
+  externalMedia
+
+  @@schema("commerce")
+}
+
+enum MerchantType {
+  gateway
+  operator
+
+  @@schema("commerce")
+}
+
+enum OperationType {
+  sale
+  topup
+  salecancel
+  rechargePurchase
+  manualAdjustDebit
+  manualAdjustCredit
+
+  @@schema("commerce")
+}
+
+enum OperationalTag {
+  current
+  main
+  alt
+
+  @@schema("commerce")
+}
+
+enum PaymentMethod {
+  cash
+  debit
+  credit
+  voucher
+  pix
+  other
+
+  @@schema("commerce")
+}
+
+enum PaymentModeRuleType {
+  time
+  value
+
+  @@schema("commerce")
+}
+
+enum PaymentOrderLogType {
+  request
+  webhook
+
+  @@schema("commerce")
+}
+
+enum PaymentOrderStatus {
+  pending
+  approved
+  cancelled
+  expired
+  refunded
+
+  @@schema("commerce")
+}
+
+enum PaymentType {
+  backend
+  billet
+  integration
+  pix
+
+  @@schema("commerce")
+}
+
+enum RechargeOrderTaxType {
+  service
+  subscription
+
+  @@schema("commerce")
+}
+
+enum RechargeOrderType {
+  merchantOrder
+  organizationOrder
+  transfer
+
+  @@schema("commerce")
+}
+
+enum RechargeRuleType {
+  mediaAuto
+  mediaExists
+
+  @@schema("commerce")
+}
+
+enum ReloadPeriodType {
+  product
+  line
+  quota
+
+  @@schema("commerce")
+}
+
+enum ServiceCloseType {
+  operator
+  backend
+  scheduled
+
+  @@schema("commerce")
+}
+
+enum Weekday {
+  sunday
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+  holiday
+
+  @@schema("commerce")
+}
+
+enum FileType {
+  employee
+  order
+
+  @@schema("salesportal")
+}
+
+enum salesportal_Gender {
+  male
+  female
+  other
+
+  @@map("Gender")
+  @@schema("salesportal")
+}
+
+enum OrderStatus {
+  new
+  paid
+  released
+  canceled
+  inconsistent
+  incomplete
+  migrated
+
+  @@schema("salesportal")
+}
+
+enum OrderType {
+  manual
+  import
+
+  @@schema("salesportal")
+}
+
+enum PaymentMode {
+  billet
+  pix
+
+  @@schema("salesportal")
+}
+
+enum AddressType {
+  residential
+  business
+  mailing
+  temporary
+
+  @@schema("user")
+}
+
+enum ApprovalType {
+  waiting
+  approved
+  unapproved
+
+  @@schema("user")
+}
+
+enum DocumentRole {
+  user
+  organization
+
+  @@schema("user")
+}
+
+enum user_Gender {
+  male
+  female
+  other
+
+  @@map("Gender")
+  @@schema("user")
+}
+
+enum MaritalStatus {
+  single
+  married
+  divorced
+  widowed
+  commonLawMarriage
+
+  @@schema("user")
+}
+
+enum MigrationType {
+  organization
+  user
+  userPhoto
+
+  @@schema("user")
+}
+
+enum OrganizationType {
+  company
+  school
+
+  @@schema("user")
+}
+
+enum PhoneChannel {
+  sms
+  whatsapp
+  telegram
+
+  @@schema("user")
+}
+
+enum PhoneType {
+  residential
+  business
+  celphone
+
+  @@schema("user")
+}
+
+enum PhotoType {
+  site
+  mobile
+  external
+
+  @@schema("user")
+}
+
+enum UserBaseType {
+  regular
+  employee
+  student
+  disability
+  elderly
+  operator
+  abt
+
+  @@schema("user")
+}

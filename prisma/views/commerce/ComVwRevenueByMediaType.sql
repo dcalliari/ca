@@ -1,0 +1,19 @@
+SELECT
+  row_number() OVER () AS id,
+  cts.type,
+  cm.name AS "comMerchant",
+  cts."comMerchantId",
+  cts.date,
+  sum(cts."transactionAmount") AS amount,
+  sum(cts."receivedAmount") AS received,
+  sum(cts."transactionCount") AS count
+FROM
+  (
+    commerce."ComTransactionSummary" cts
+    JOIN commerce."ComMerchant" cm ON ((cm.id = cts."comMerchantId"))
+  )
+GROUP BY
+  cts.type,
+  cm.name,
+  cts."comMerchantId",
+  cts.date;

@@ -1,0 +1,23 @@
+# Diretórios que não irão subir
+node_modules
+dist/
+coverage/
+logs/
+
+# Arquivos
+*.log
+*.tmp
+package-lock.json
+yarn.lock
+tsconfig.tsbuildinfo.json
+typings/
+uploads/
+
+# Configurações
+.editorconfig
+.vscode/
+.env
+.env.dev
+
+# Ignorar arquivos específicos dentro de um diretório
+node_modules/!important-file.js
