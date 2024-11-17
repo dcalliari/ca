@@ -1,0 +1,1578 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Customer API",
+    "description": "Customer API Information",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:9019",
+      "description": "Test server"
+    }
+  ],
+  "tags": [
+    { "name": "card", "description": "Card-related endpoints" },
+    { "name": "company", "description": "Company-related endpoints" },
+    { "name": "employee", "description": "Employee-related endpoints" }
+  ],
+  "paths": {
+    "/card/status/unlock/{companyId}": {
+      "get": {
+        "tags": ["card"],
+        "summary": "Get all cards to unlock for a company",
+        "operationId": "getAllCardsToUnlock",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the company",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of employees with cards to unlock",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Name of the employee"
+                      },
+                      "cardNumber": {
+                        "type": "string",
+                        "description": "Card number of the employee"
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "Media ID"
+                      },
+                      "receiveddate_tz": {
+                        "type": ["string", "null"],
+                        "format": "date-time",
+                        "description": "Date when the card was received (nullable)"
+                      },
+                      "receivedby": {
+                        "type": ["string", "null"],
+                        "description": "Who received the card (nullable)"
+                      },
+                      "csn": {
+                        "type": "string",
+                        "description": "CSN value as text"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Error message"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/card/status/update-not-unlock": {
+      "put": {
+        "tags": ["card"],
+        "summary": "Update cards not unlocked",
+        "operationId": "updateCardsToUnlock",
+        "requestBody": {
+          "description": "List of employee IDs whose card statuses need to be updated.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "employeesId": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "example": [123, 456, 789]
+                  }
+                },
+                "required": ["employeesId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cards updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "boolean",
+                      "example": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error or Axios error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal Server error"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Error message details"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/card/replacement": {
+      "get": {
+        "tags": ["card"],
+        "summary": "Get all second copy requests",
+        "operationId": "getReplacementRequestList",
+        "parameters": [
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "Start date for filtering requests",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "End date for filtering requests",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search term to filter by name or card info",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for pagination",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results per page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "description": "Filter by active status",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "cscId",
+            "in": "query",
+            "description": "Filter by service channel ID",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "mreq_id": { "type": "integer" },
+                          "name": { "type": "string" },
+                          "mreq_oldcardinfo": { "type": "string" },
+                          "mreq_createdat": { "type": "string", "format": "date-time" },
+                          "mreq_requestdate": { "type": "string", "format": "date" },
+                          "mreq_paymentdate": { "type": "string", "format": "date", "nullable": true },
+                          "value": { "type": "number", "format": "float" },
+                          "mreq_ispaid": { "type": "boolean" },
+                          "mreq_newcardinfo": { "type": "string", "nullable": true },
+                          "mreq_isactive": { "type": "boolean" },
+                          "mreq_deactivationreason": { "type": "string", "nullable": true },
+                          "mreq_modifiedby": { "type": "string", "nullable": true }
+                        }
+                      }
+                    },
+                    "count": { "type": "integer" },
+                    "csc": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "csc_id": { "type": "integer" },
+                          "csc_isactive": { "type": "boolean" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "boolean" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/card/replacement/contact/{mreqId}": {
+      "get": {
+      "tags": ["card"],
+      "summary": "Get contact by MSE ID",
+      "operationId": "getContactByMseId",
+      "parameters": [
+        {
+        "name": "mreqId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64"
+        }
+        }
+      ],
+      "responses": {
+        "200": {
+        "description": "Success",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "contact": {
+              "type": "object",
+              "description": "Contact details",
+              "properties": {
+              "mreq_id": { "type": "integer" },
+              "name": { "type": "string" },
+              "mreq_oldcardinfo": { "type": "string" },
+              "mreq_isactive": { "type": "boolean" },
+              "mreq_deactivationreason": { "type": "string", "nullable": true },
+              "mreq_modifiedby": { "type": "string" },
+              "csc_name": { "type": "string" },
+              "mreq_paymenttransactionid": { "type": "integer" },
+              "mreq_ispaid": { "type": "boolean" }
+              }
+            },
+            "editedBy": {
+              "type": "object",
+              "description": "Details of the user who edited the request",
+              "properties": {
+              "mreq_id": { "type": "integer" },
+              "name": { "type": "string" },
+              "mreq_oldcardinfo": { "type": "string" },
+              "mreq_isactive": { "type": "boolean" },
+              "mreq_deactivationreason": { "type": "string", "nullable": true },
+              "mreq_modifiedby": { "type": "string" },
+              "csc_name": { "type": "string" },
+              "mreq_paymenttransactionid": { "type": "integer" },
+              "mreq_ispaid": { "type": "boolean" }
+              }
+            },
+            "billetURL": {
+              "type": "string",
+              "description": "URL of the payment billet",
+              "nullable": true
+            }
+            }
+          }
+          }
+        }
+        },
+        "500": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "error": { "type": "boolean" },
+            "message": { "type": "string" }
+            }
+          }
+          }
+        }
+        }
+      }
+      }
+    },
+    "/card/replacement/request/{mreqId}": {
+      "get": {
+      "tags": ["card"],
+      "summary": "Get details of a specific second copy request",
+      "operationId": "getReplacementRequest",
+      "parameters": [
+        {
+        "name": "mreqId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64"
+        }
+        }
+      ],
+      "responses": {
+        "200": {
+        "description": "Success",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the user"
+            },
+            "mreq_oldcardinfo": {
+              "type": "string",
+              "description": "Old card information"
+            },
+            "mreq_requestdate": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Request date"
+            }
+            }
+          }
+          }
+        }
+        },
+        "500": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "error": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            }
+            }
+          }
+          }
+        }
+        }
+      }
+      }
+    },
+    "/card/replacement/cancelRequest/{mreqId}": {
+      "put": {
+      "tags": ["card"],
+      "summary": "Cancel a second copy request",
+      "operationId": "cancelReplacementRequest",
+      "parameters": [
+        {
+        "name": "mreqId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64"
+        }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+        "application/json": {
+          "schema": {
+          "type": "object",
+          "properties": {
+            "observation": {
+            "type": "string",
+            "description": "Reason for deactivation"
+            },
+            "editedBy": {
+            "type": "string",
+            "description": "User who edited the request"
+            }
+          },
+          "required": ["observation", "editedBy"]
+          }
+        }
+        }
+      },
+      "responses": {
+        "200": {
+        "description": "Request cancelled"
+        },
+        "500": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "error": {
+              "type": "boolean",
+              "example": true
+            },
+            "message": {
+              "type": "string",
+              "example": "Internal server error"
+            }
+            }
+          }
+          }
+        }
+        }
+      }
+      }
+    },
+    "/company": {
+      "get": {
+        "tags": ["company"],
+        "summary": "Retrieve a paginated list of companies",
+        "description": "Fetches a paginated list of companies along with associated user information, allowing optional search by company name, username, or document.",
+        "operationId": "getCompanyList",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Optional search term for filtering companies by name, username, or document.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "description": "Number of results per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "description": "Number of items to skip for pagination.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with a paginated list of companies.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "total": 1000,
+                  "count": 10,
+                  "data": [
+                    {
+                      "companyname": "empresa 1",
+                      "username": "nome do usuario",
+                      "userdocument": "12345678900",
+                      "email": "email@empresa1.com",
+                      "salcompany": 1,
+                      "id": 1,
+                      "salCompanyId": 1,
+                      "secUserId": 1,
+                      "document": "12345678900"
+                    },
+                    {
+                      "companyname": "empresa 2",
+                      "username": "nome do usuario",
+                      "userdocument": "12345678900",
+                      "email": "email@empresa2.com",
+                      "salcompany": 2,
+                      "id": 2,
+                      "salCompanyId": 2,
+                      "secUserId": 2,
+                      "document": "12345678900"
+                    },
+                    {
+                      "companyname": "empresa 3",
+                      "username": "nome do usuario",
+                      "userdocument": "12345678900",
+                      "email": "email@empresa3.com",
+                      "salcompany": 3,
+                      "id": 3,
+                      "salCompanyId": 3,
+                      "secUserId": 3,
+                      "document": "12345678900"
+                    },
+                    {
+                      "etc": "..."
+                    },
+                    {
+                      "companyname": "empresa 8",
+                      "username": "nome do usuario",
+                      "userdocument": "12345678900",
+                      "email": "email@empresa8.com",
+                      "salcompany": 8,
+                      "id": 8,
+                      "salCompanyId": 8,
+                      "secUserId": 8,
+                      "document": "12345678900"
+                    },
+                    {
+                      "companyname": "empresa 9",
+                      "username": "nome do usuario",
+                      "userdocument": "12345678900",
+                      "email": "email@empresa9.com",
+                      "salcompany": 9,
+                      "id": 9,
+                      "salCompanyId": 9,
+                      "secUserId": 9,
+                      "document": "12345678900"
+                    },
+                    {
+                      "companyname": "empresa 10",
+                      "username": "nome do usuario",
+                      "userdocument": "12345678900",
+                      "email": "email@empresa10.com",
+                      "salcompany": 10,
+                      "id": 10,
+                      "salCompanyId": 10,
+                      "secUserId": 10,
+                      "document": "12345678900"
+                    }
+                  ],
+                  "take": 10,
+                  "skip": 0
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "An unexpected error occurred.",
+                  "error": "Detailed error message here."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/company/{companyId}": {
+      "get": {
+        "tags": ["company"],
+        "summary": "Retrieve company details",
+        "description": "Fetches details of a specific company along with associated user information.",
+        "operationId": "getCompany",
+        "parameters": [
+          {
+        "name": "companyId",
+        "in": "path",
+        "description": "The ID of the company to retrieve.",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "example": 8725
+        }
+          }
+        ],
+        "responses": {
+          "200": {
+        "description": "Successful response with company details.",
+        "content": {
+          "application/json": {
+            "schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "integer" },
+            "name": { "type": "string" },
+            "document": { "type": "string" },
+            "email": { "type": "string" },
+            "SalCompanyCredential": {
+              "type": "object",
+              "properties": {
+            "SecUser": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "document": { "type": "string" },
+                "email": { "type": "string" }
+              }
+            }
+              }
+            }
+          }
+            }
+          }
+        }
+          },
+          "404": {
+        "description": "Company not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+          "type": "object",
+          "properties": {
+            "message": { "type": "string", "example": "Active company not found." }
+          }
+            }
+          }
+        }
+          },
+          "500": {
+        "description": "Internal server error.",
+        "content": {
+          "application/json": {
+            "schema": {
+          "type": "object",
+          "properties": {
+            "message": { "type": "string", "example": "An unexpected error occurred." },
+            "error": { "type": "string", "example": "Detailed error message here." }
+          }
+            }
+          }
+        }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["company"],
+        "summary": "Edit company sec user information",
+        "operationId": "editCompany",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the company to be edited",
+            "schema": {
+              "type": "integer",
+              "example": 8725
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "newName": {
+                    "type": "string",
+                    "description": "The new name for the company",
+                    "example": "New Company Name"
+                  },
+                  "newEmail": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "The new email for the company",
+                    "example": "newemail@example.com"
+                  },
+                  "newDocument": {
+                    "type": "string",
+                    "description": "The new document for the company",
+                    "example": "123456789"
+                  }
+                },
+                "required": ["newEmail", "newName", "newDocument"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Company sec user information successfully updated."
+          },
+          "400": {
+            "description": "Bad Request. Possible causes: missing required fields or invalid data."
+          },
+          "404": {
+            "description": "Company or related user not found."
+          },
+          "409": {
+            "description": "Conflict. Email or document already in use."
+          },
+          "500": {
+            "description": "An unexpected error occurred."
+          }
+        }
+      }
+    },
+    "/company/order/{companyId}": {
+      "get": {
+      "tags": ["company"],
+      "summary": "Get company orders",
+      "operationId": "getCompanyOrders",
+      "parameters": [
+        {
+        "name": "companyId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The ID of the company"
+        }
+        },
+        {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Search term to filter orders by ID"
+        }
+        },
+        {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "description": "Filter orders by status"
+        }
+        },
+        {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 10,
+          "description": "Number of results per page"
+        }
+        },
+        {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 0,
+          "description": "Number of items to skip for pagination"
+        }
+        },
+        {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 1,
+          "description": "Page number for pagination"
+        }
+        }
+      ],
+      "responses": {
+        "200": {
+        "description": "Successful response with a paginated list of company orders",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "total": {
+              "type": "integer",
+              "description": "Total number of orders"
+            },
+            "count": {
+              "type": "integer",
+              "description": "Number of orders in the current page"
+            },
+            "page": {
+              "type": "integer",
+              "description": "Current page number"
+            },
+            "data": {
+              "type": "array",
+              "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "date": { "type": "string", "format": "date-time" },
+                "totalValue": { "type": "number", "format": "float" },
+                "isPaid": { "type": "boolean" },
+                "status": { "type": "string" },
+                "paymentDate": { "type": "string", "format": "date-time" },
+                "isReleased": { "type": "boolean" },
+                "releaseDate": { "type": "string", "format": "date-time" },
+                "cancelDate": { "type": "string", "format": "date-time" },
+                "orderType": { "type": "string" },
+                "paymentMode": { "type": "string" },
+                "externalId": { "type": "integer" },
+                "SalOrderItem": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                  "cardNumber": { "type": "string" }
+                  }
+                }
+                }
+              }
+              }
+            }
+            }
+          }
+          }
+        }
+        },
+        "400": {
+        "description": "Invalid company ID format",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "message": { "type": "string", "example": "Company ID must be an integer number" }
+            }
+          }
+          }
+        }
+        },
+        "404": {
+        "description": "Company not found",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "message": { "type": "string", "example": "Company not found" }
+            }
+          }
+          }
+        }
+        },
+        "500": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "message": { "type": "string", "example": "An unexpected error occurred." },
+            "error": { "type": "string", "example": "Detailed error message" }
+            }
+          }
+          }
+        }
+        }
+      }
+      }
+    },
+    "/company/order/{orderId}/items": {
+      "get": {
+        "tags": ["company"],
+        "summary": "Get order items",
+        "operationId": "getOrderItems",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "document": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "number",
+                            "format": "float"
+                          },
+                          "cardNumber": {
+                            "type": "string"
+                          },
+                          "userType": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/company/employee/{companyId}": {
+      "get": {
+        "tags": ["company"],
+        "summary": "Get company employees",
+        "operationId": "getCompanyEmployeeList",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the company",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "The maximum number of employees to return",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "The number of items to skip before starting to collect the result set",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "The page number for paginated results",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Search term to filter employees by document, name, card number, or group description",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "Total number of employees"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of employees in the current page"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "description": "The current page number"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "integer" },
+                          "name": { "type": "string" },
+                          "document": { "type": "string" },
+                          "cardNumber": { "type": "string" },
+                          "userType": { "type": "string" },
+                          "SalEmployeeGroupId": { "type": "integer" },
+                          "groupname": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid company ID format"
+          },
+          "404": {
+            "description": "Company not found"
+          },
+          "500": {
+            "description": "An unexpected error occurred"
+          }
+        }
+      }
+    },
+    "/employee/{orderId}": {
+      "get": {
+      "tags": ["employee"],
+      "summary": "Get employees' first card number by order",
+      "operationId": "getEmployeeOrder",
+      "parameters": [
+        {
+        "name": "orderId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The ID of the order"
+        }
+        },
+        {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 10,
+          "description": "Number of results per page"
+        }
+        },
+        {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 0,
+          "description": "Number of items to skip for pagination"
+        }
+        },
+        {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 1,
+          "description": "Page number for pagination"
+        }
+        }
+      ],
+      "responses": {
+        "200": {
+        "description": "Successful response with a paginated list of employees' first card numbers by order",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "data": {
+              "type": "array",
+              "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "document": { "type": "string" },
+                "id": { "type": "integer" },
+                "cardNumber": { "type": "string" },
+                "value": { "type": "number", "format": "float" },
+                "newCard": { "type": "string" }
+              }
+              }
+            },
+            "count": { "type": "integer" },
+            "total": { "type": "integer" },
+            "page": { "type": "integer" }
+            }
+          }
+          }
+        }
+        },
+        "500": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+            "message": { "type": "string", "example": "An unexpected error occurred." },
+            "error": { "type": "string", "example": "Detailed error message" }
+            }
+          }
+          }
+        }
+        }
+      }
+      }
+    },
+    "/employee/{employeeId}/recharges": {
+      "get": {
+        "tags": ["employee"],
+        "summary": "Get employee recharges",
+        "operationId": "getEmployeeRecharges",
+        "parameters": [
+          {
+            "name": "employeeId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the employee",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Limit the number of recharges returned",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Number of recharges to skip before starting to collect the result set",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page number for pagination",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with paginated employee recharges",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "Total number of recharges available"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of recharges in the current response"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "description": "Current page number"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "orderid": {
+                            "type": "integer",
+                            "description": "Order ID"
+                          },
+                          "companyname": {
+                            "type": "string",
+                            "description": "Name of the company"
+                          },
+                          "employeename": {
+                            "type": "string",
+                            "description": "Name of the employee"
+                          },
+                          "orderdate": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Date the order was created"
+                          },
+                          "value": {
+                            "type": "number",
+                            "format": "float",
+                            "description": "Recharge value"
+                          },
+                          "cardNumber": {
+                            "type": "string",
+                            "description": "Card number of the employee"
+                          },
+                          "paymentDate": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Date of payment"
+                          },
+                          "externalId": {
+                            "type": "integer",
+                            "description": "External ID for the order"
+                          },
+                          "detailid": {
+                            "type": "integer",
+                            "description": "Detail ID for the recharge"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid employee ID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Employee ID must be an integer number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Employee not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Employee not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "An unexpected error occurred."
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Detailed error message"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employee/document/{documentId}": {
+  "put": {
+    "tags": ["employee"],
+    "summary": "Update employee document",
+    "operationId": "updateEmployeeInformation",
+    "parameters": [
+      {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "The ID of the document to be updated."
+      }
+    ],
+    "requestBody": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "externalId": {
+                "type": "string",
+                "description": "The external ID of the employee."
+              },
+              "name": {
+                "type": "string",
+                "description": "The name of the employee."
+              },
+              "birthDate": {
+                "type": "string",
+                "format": "date-time",
+                "description": "The birth date of the employee."
+              },
+              "document": {
+                "type": "string",
+                "description": "The updated document ID of the employee."
+              },
+              "updateMotherName": {
+                "type": "boolean",
+                "description": "Indicates if the mother's name should be updated."
+              },
+              "motherName": {
+                "type": "string",
+                "description": "The mother's name of the employee."
+              },
+              "updateAddress": {
+                "type": "boolean",
+                "description": "Indicates if the address should be updated."
+              },
+              "addressData": {
+                "type": "object",
+                "properties": {
+                  "addrZipCode": {
+                    "type": "string",
+                    "description": "The zip code of the address."
+                  },
+                  "addrStreet": {
+                    "type": "string",
+                    "description": "The street of the address."
+                  },
+                  "addrNbr": {
+                    "type": "string",
+                    "description": "The number of the address."
+                  },
+                  "addrCity": {
+                    "type": "string",
+                    "description": "The city of the address."
+                  },
+                  "addrComplement": {
+                    "type": "string",
+                    "description": "The complement of the address."
+                  },
+                  "addrDistrict": {
+                    "type": "string",
+                    "description": "The district of the address."
+                  },
+                  "addrState": {
+                    "type": "string",
+                    "description": "The state of the address."
+                  }
+                },
+                "description": "The address details of the employee."
+              },
+              "updateEmail": {
+                "type": "boolean",
+                "description": "Indicates if the email should be updated."
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "description": "The updated email of the employee."
+              },
+              "updatePhone": {
+                "type": "boolean",
+                "description": "Indicates if the phone number should be updated."
+              },
+              "phone": {
+                "type": "string",
+                "description": "The updated phone number of the employee."
+              }
+            },
+            "required": ["externalId", "name", "birthDate", "document"]
+          }
+        }
+      }
+    },
+    "responses": {
+      "200": {
+        "description": "Success"
+      },
+      "500": {
+        "description": "An unexpected error occurred.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "An unexpected error occurred."
+                },
+                "error": {
+                  "type": "string",
+                  "example": "Detailed error message."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+  }
+}
